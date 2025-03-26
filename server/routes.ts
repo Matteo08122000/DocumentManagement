@@ -23,8 +23,10 @@ const upload = multer({
       cb(null, uploadPath);
     },
     filename: function (req, file, cb) {
-      // Keep original filename
-      cb(null, file.originalname);
+      // Ottieni solo il nome del file, senza percorsi
+      const fileName = file.originalname.split('/').pop() || file.originalname;
+      // Aggiungiamo un timestamp per evitare sovrascritture di file con lo stesso nome
+      cb(null, `${Date.now()}-${fileName}`);
     }
   }),
   fileFilter: (req, file, cb) => {
@@ -273,8 +275,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const file of files) {
         try {
+          // Ottieni solo il nome del file, senza il percorso
+          const fileName = file.originalname.split('/').pop() || file.originalname;
+          
           // Parse document name
-          const parsedName = parseDocumentName(file.originalname);
+          const parsedName = parseDocumentName(fileName);
           
           // Get file type
           const fileType = getFileType(file.mimetype);

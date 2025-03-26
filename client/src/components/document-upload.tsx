@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { Upload, File, X } from 'lucide-react';
+import { Upload, File, X, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { parseDocumentName } from '@/lib/document-parser';
 
@@ -23,7 +23,15 @@ export default function DocumentUpload({ onUploadComplete, onCancel, parentId }:
     const invalidFiles: { file: File; reason: string }[] = [];
 
     for (const file of acceptedFiles) {
-      const result = parseDocumentName(file.name);
+      // Ignora i file che non sono i tipi desiderati
+      if (!file.type && !file.name.match(/\.(xlsx|xls|docx|doc|pdf)$/i)) {
+        continue;
+      }
+      
+      // Ottieni solo il nome del file, senza il percorso
+      const fileName = file.name.split('/').pop() || file.name;
+      
+      const result = parseDocumentName(fileName);
       if (result.isValid) {
         validFiles.push(file);
       } else {
@@ -41,6 +49,10 @@ export default function DocumentUpload({ onUploadComplete, onCancel, parentId }:
 
     setUploadingFiles(prev => [...prev, ...validFiles]);
   }, [toast]);
+
+  // Riferimenti ai selettori di file e cartella
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -70,17 +82,20 @@ export default function DocumentUpload({ onUploadComplete, onCancel, parentId }:
     setIsUploading(true);
 
     try {
-      for (const file of uploadingFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        if (parentId) {
-          formData.append('parentId', parentId.toString());
-        }
-
-        await apiRequest('POST', '/api/documents/upload', formData);
+      // Utilizziamo un unico FormData per inviare tutti i file in una sola richiesta
+      const formData = new FormData();
+      
+      // Aggiungiamo tutti i file
+      uploadingFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      if (parentId) {
+        formData.append('parentId', parentId.toString());
       }
 
+      await apiRequest('POST', '/api/upload', formData);
+      
       // Invalidate queries to refresh document list
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
       
@@ -110,13 +125,70 @@ export default function DocumentUpload({ onUploadComplete, onCancel, parentId }:
           <Upload className="mx-auto h-10 w-10 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-900">Trascina qui i tuoi documenti</h3>
           <p className="text-sm text-gray-500">oppure</p>
-          <Button type="button" className="mx-auto">
-            Seleziona File
-          </Button>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 justify-center">
+            <Button 
+              type="button" 
+              className="mx-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+            >
+              <File className="mr-2 h-4 w-4" />
+              Seleziona File
+            </Button>
+            <Button 
+              type="button" 
+              className="mx-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                folderInputRef.current?.click();
+              }}
+            >
+              <Folder className="mr-2 h-4 w-4" />
+              Seleziona Cartella
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-gray-500 mt-2">
           Supporta documenti Excel, Word e PDF nel formato: PointNumber-Title-Rev.Number-YYYYMMDD.extension
         </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Puoi caricare sia singoli file che intere cartelle contenenti documenti nel formato corretto.
+        </p>
+        
+        {/* Input per selezione file singoli */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          multiple
+          accept=".xlsx,.xls,.docx,.doc,.pdf"
+          onChange={(e) => {
+            if (e.target.files) {
+              onDrop(Array.from(e.target.files));
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+        
+        {/* Input per selezione cartella */}
+        <input
+          type="file"
+          ref={folderInputRef}
+          className="hidden"
+          // @ts-ignore - directory e webkitdirectory non sono riconosciuti da TypeScript ma sono validi in HTML
+          directory=""
+          webkitdirectory=""
+          multiple
+          accept=".xlsx,.xls,.docx,.doc,.pdf"
+          onChange={(e) => {
+            if (e.target.files) {
+              onDrop(Array.from(e.target.files));
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
 
       {uploadingFiles.length > 0 && (

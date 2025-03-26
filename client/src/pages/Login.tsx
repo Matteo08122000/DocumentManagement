@@ -121,9 +121,9 @@ const Login: React.FC = () => {
           <div className="text-center text-sm">
             Non hai un account?{' '}
             <Link href="/register">
-              <a className="font-medium text-blue-600 hover:text-blue-500">
+              <span className="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">
                 Registrati ora
-              </a>
+              </span>
             </Link>
           </div>
         </CardFooter>

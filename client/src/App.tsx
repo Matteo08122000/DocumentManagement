@@ -55,10 +55,7 @@ function App() {
                 <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Assistenza</span>
               </Link>
               <Link href="/login">
-                <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Accedi</span>
-              </Link>
-              <Link href="/register">
-                <span className="bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-800 cursor-pointer block">Registrati</span>
+                <span className="bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-800 cursor-pointer block">Accedi</span>
               </Link>
             </nav>
           </div>

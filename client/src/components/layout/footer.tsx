@@ -63,12 +63,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link href="/login">
-                  <a className="text-sm text-gray-600 hover:text-blue-600">Accedi</a>
-                </Link>
-              </li>
-              <li>
-                <Link href="/register">
-                  <a className="text-sm text-gray-600 hover:text-blue-600">Registrati</a>
+                  <span className="text-sm text-gray-600 hover:text-blue-600 cursor-pointer">Accedi</span>
                 </Link>
               </li>
             </ul>

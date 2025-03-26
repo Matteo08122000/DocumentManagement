@@ -1,0 +1,312 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Document, DocumentItem, insertDocumentItemSchema } from '@shared/schema';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatDate } from '@/lib/dateUtils';
+import StatusEmoji from '@/components/ui/StatusEmoji';
+import FileIcon from '@/components/ui/FileIcon';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import EmailNotificationModal from './EmailNotificationModal';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
+
+interface DocumentDetailModalProps {
+  document: Document | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isOpen, onClose }) => {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<DocumentItem | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: items = [], isLoading: isLoadingItems } = useQuery<DocumentItem[]>({
+    queryKey: ['/api/documents', document?.id, 'items'],
+    enabled: !!document?.id && isOpen
+  });
+  
+  // Form setup for adding new items
+  const form = useForm<any>({
+    resolver: zodResolver(insertDocumentItemSchema.omit({ documentId: true })),
+    defaultValues: {
+      title: '',
+      description: '',
+      expirationDate: null,
+      notificationDays: 30,
+      status: 'valid'
+    }
+  });
+  
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      form.reset();
+      setActiveTab('overview');
+    }
+  }, [isOpen, form]);
+  
+  // Add item mutation
+  const addItemMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!document) throw new Error('No document selected');
+      
+      return apiRequest('POST', `/api/documents/${document.id}/items`, {
+        ...data,
+        documentId: document.id
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Elemento aggiunto',
+        description: 'Elemento del documento aggiunto con successo',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/documents', document?.id, 'items'] });
+      form.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Errore',
+        description: `Impossibile aggiungere l'elemento: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  const onSubmit = form.handleSubmit((data) => {
+    addItemMutation.mutate(data);
+  });
+  
+  if (!document) return null;
+  
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <div className="flex justify-between items-center border-b pb-3">
+              <DialogTitle className="text-lg leading-6 font-medium text-gray-900">
+                {document.pointNumber} - {document.title}
+              </DialogTitle>
+              <div>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
+                  {document.revision}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <StatusEmoji status={document.status} /> {document.status === 'valid' ? 'Valido' : document.status === 'expiring' ? 'In Scadenza' : 'Scaduto'}
+                </span>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="mb-4">
+              <TabsTrigger value="overview">Panoramica</TabsTrigger>
+              <TabsTrigger value="items">Elementi Controllati</TabsTrigger>
+              <TabsTrigger value="add-item">Aggiungi Elemento</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-md font-medium text-gray-900">Dettagli Documento</h4>
+                  <span className="text-sm text-gray-500">Data Emissione: {formatDate(document.emissionDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileIcon fileType={document.fileType} />
+                  <span className="text-sm text-gray-900">
+                    {document.fileType.charAt(0).toUpperCase() + document.fileType.slice(1)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Questo documento contiene le informazioni relative al punto norma {document.pointNumber}.
+                  {document.expirationDate && (
+                    <>
+                      <br />
+                      <strong>Data Scadenza:</strong> {formatDate(document.expirationDate)}
+                    </>
+                  )}
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="items">
+              {isLoadingItems ? (
+                <div className="animate-pulse space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>Nessun elemento controllato per questo documento.</p>
+                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab('add-item')}>
+                    <span className="material-icons-round mr-2 text-sm">add</span>
+                    Aggiungi Elemento
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Elemento</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Data Scadenza</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stato</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Preavviso</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Azioni</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{item.title}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {item.expirationDate ? formatDate(item.expirationDate) : '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            <StatusEmoji status={item.status} />
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {item.notificationDays} giorni
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            <button 
+                              className="text-primary-600 hover:text-primary-900"
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setIsEmailModalOpen(true);
+                              }}
+                            >
+                              Notifiche
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="add-item">
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="title">Titolo</Label>
+                    <Input
+                      id="title"
+                      {...form.register('title')}
+                      className="mt-1"
+                      placeholder="Titolo dell'elemento"
+                    />
+                    {form.formState.errors.title && (
+                      <p className="text-red-500 text-xs mt-1">{form.formState.errors.title.message?.toString()}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="notificationDays">Giorni di Preavviso</Label>
+                    <Input
+                      id="notificationDays"
+                      type="number"
+                      {...form.register('notificationDays', { valueAsNumber: true })}
+                      className="mt-1"
+                      placeholder="30"
+                    />
+                    {form.formState.errors.notificationDays && (
+                      <p className="text-red-500 text-xs mt-1">{form.formState.errors.notificationDays.message?.toString()}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Descrizione</Label>
+                  <Textarea
+                    id="description"
+                    {...form.register('description')}
+                    className="mt-1"
+                    placeholder="Descrizione dell'elemento"
+                    rows={3}
+                  />
+                  {form.formState.errors.description && (
+                    <p className="text-red-500 text-xs mt-1">{form.formState.errors.description.message?.toString()}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <Label>Data di Scadenza</Label>
+                  <div className="mt-1">
+                    <Controller
+                      control={form.control}
+                      name="expirationDate"
+                      render={({ field }) => (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(new Date(field.value), "PPP", { locale: it }) : "Seleziona una data"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => field.onChange(date?.toISOString())}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    />
+                    {form.formState.errors.expirationDate && (
+                      <p className="text-red-500 text-xs mt-1">{form.formState.errors.expirationDate.message?.toString()}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <Button type="submit" disabled={addItemMutation.isPending}>
+                  {addItemMutation.isPending ? 'Aggiunta in corso...' : 'Aggiungi Elemento'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Chiudi
+            </Button>
+            <Button type="button">
+              Salva Modifiche
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <EmailNotificationModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        documentId={document.id}
+        documentItemId={selectedItem?.id}
+      />
+    </>
+  );
+};
+
+export default DocumentDetailModal;

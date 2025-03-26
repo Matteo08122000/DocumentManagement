@@ -1,111 +1,105 @@
-import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Define file types
-export const fileTypeEnum = pgEnum('file_type', ['excel', 'word', 'pdf']);
-
-// Define document statuses
-export const documentStatusEnum = pgEnum('document_status', ['active', 'warning', 'critical']);
-
-// Users table (from original schema)
+// USER SCHEMA
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  email: text("email"),
+  notificationDays: integer("notification_days").default(30),
 });
 
-// Parent Documents (main documents)
-export const parentDocuments = pgTable("parent_documents", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Child Documents (individual files within parent documents)
-export const childDocuments = pgTable("child_documents", {
-  id: serial("id").primaryKey(),
-  parentId: integer("parent_id"),
-  filename: text("filename").notNull(),
-  pointNumber: text("point_number").notNull(), // e.g., "4.2"
-  title: text("title").notNull(), // e.g., "Sicurezza Alimentare"
-  revision: text("revision").notNull(), // e.g., "Rev.1"
-  issueDate: text("issue_date").notNull(), // e.g., "20250325"
-  fileType: fileTypeEnum("file_type").notNull(),
-  expirationDate: text("expiration_date"), // Only for Excel files
-  noticePeriod: integer("notice_period"), // In days, for reminders
-  status: documentStatusEnum("status").default("active"),
-  content: text("content"), // Store file content as base64 for in-memory storage
-  isObsolete: boolean("is_obsolete").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Email notification subscriptions
-export const notificationSubscriptions = pgTable("notification_subscriptions", {
-  id: serial("id").primaryKey(),
-  documentId: integer("document_id").notNull(),
-  email: text("email").notNull(),
-  noticeDays: integer("notice_days").notNull(), // Days before expiration to send notification
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Define activity log for document changes
-export const activityLogs = pgTable("activity_logs", {
-  id: serial("id").primaryKey(),
-  documentId: integer("document_id").notNull(),
-  action: text("action").notNull(), // e.g., "created", "updated", "obsoleted"
-  details: text("details").notNull(),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
-
-// Schema for inserting parent documents
-export const insertParentDocumentSchema = createInsertSchema(parentDocuments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Schema for inserting child documents
-export const insertChildDocumentSchema = createInsertSchema(childDocuments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  status: true,
-  isObsolete: true,
-});
-
-// Schema for inserting notification subscriptions
-export const insertNotificationSubscriptionSchema = createInsertSchema(notificationSubscriptions).omit({
-  id: true,
-  createdAt: true,
-});
-
-// Schema for inserting activity logs
-export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
-  id: true,
-  timestamp: true,
-});
-
-// Types for the schemas
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-export type InsertParentDocument = z.infer<typeof insertParentDocumentSchema>;
-export type ParentDocument = typeof parentDocuments.$inferSelect;
-
-export type InsertChildDocument = z.infer<typeof insertChildDocumentSchema>;
-export type ChildDocument = typeof childDocuments.$inferSelect;
-
-export type InsertNotificationSubscription = z.infer<typeof insertNotificationSubscriptionSchema>;
-export type NotificationSubscription = typeof notificationSubscriptions.$inferSelect;
-
-export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-
-// Original user insertion schema
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  email: true,
+  notificationDays: true,
+});
+
+// DOCUMENT SCHEMA
+export const documentStatus = {
+  VALID: "valid",
+  EXPIRING: "expiring",
+  EXPIRED: "expired",
+} as const;
+
+export const documentTypes = {
+  EXCEL: "excel",
+  WORD: "word",
+  PDF: "pdf",
+} as const;
+
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  pointNumber: text("point_number").notNull(),
+  title: text("title").notNull(),
+  revision: text("revision").notNull(),
+  emissionDate: timestamp("emission_date").notNull(),
+  filePath: text("file_path").notNull(),
+  fileType: text("file_type").notNull(),
+  expirationDate: timestamp("expiration_date"),
+  status: text("status").notNull().default(documentStatus.VALID),
+  parentId: integer("parent_id").references(() => documents.id),
+  isObsolete: boolean("is_obsolete").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// CHILD DOCUMENT ITEMS (used for Excel files with expiration dates)
+export const documentItems = pgTable("document_items", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().references(() => documents.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  expirationDate: timestamp("expiration_date"),
+  notificationDays: integer("notification_days").default(30),
+  status: text("status").notNull().default(documentStatus.VALID),
+  metadata: jsonb("metadata"),
+});
+
+export const insertDocumentItemSchema = createInsertSchema(documentItems).omit({
+  id: true,
+});
+
+// EMAIL NOTIFICATION SCHEMA
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  documentId: integer("document_id").references(() => documents.id),
+  documentItemId: integer("document_item_id").references(() => documentItems.id),
+  notificationDays: integer("notification_days").notNull().default(30),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+// EXPORT TYPES
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type DocumentItem = typeof documentItems.$inferSelect;
+export type InsertDocumentItem = z.infer<typeof insertDocumentItemSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// PARSING DOCUMENT NAME SCHEMA
+export const parseDocumentNameSchema = z.object({
+  pointNumber: z.string(),
+  title: z.string(),
+  revision: z.string(),
+  date: z.string(),
 });

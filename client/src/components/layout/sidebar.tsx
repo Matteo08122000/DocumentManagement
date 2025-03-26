@@ -162,9 +162,11 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
           
           {/* Header */}
           <div className="p-4 border-b flex items-center justify-between">
-            <div className="text-xl font-bold text-blue-800 flex items-center">
-              <span className="mr-2">DocGenius</span>
-            </div>
+            <Link href="/">
+              <span className="text-xl font-bold text-blue-800 flex items-center cursor-pointer">
+                DocGenius
+              </span>
+            </Link>
             <Button 
               variant="ghost" 
               size="sm" 

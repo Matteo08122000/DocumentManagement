@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
@@ -21,10 +21,12 @@ export default function Navbar({ toggleSidebar }: NavbarProps) {
   
   const isLoggedIn = Boolean(user);
   
-  // Logo testo
+  // Logo testo cliccabile
   const AppLogo = () => (
     <div className="flex-shrink-0 flex items-center">
-      <span className="font-bold text-xl text-white">DocGenius</span>
+      <Link href="/">
+        <span className="font-bold text-xl text-white cursor-pointer">DocGenius</span>
+      </Link>
     </div>
   );
   

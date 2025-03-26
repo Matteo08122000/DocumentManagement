@@ -28,7 +28,9 @@ function App() {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <span className="text-xl font-bold">DocGenius</span>
+              <Link href="/">
+                <span className="text-xl font-bold cursor-pointer">DocGenius</span>
+              </Link>
             </div>
             
             <Button 
@@ -68,7 +70,9 @@ function App() {
           <div className="fixed inset-0 bg-black/50" onClick={() => setIsSidebarOpen(false)}></div>
           <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg p-4 flex flex-col">
             <div className="flex justify-between items-center mb-5 pb-3 border-b">
-              <span className="font-bold text-xl text-blue-800">DocGenius</span>
+              <Link href="/">
+                <span className="font-bold text-xl text-blue-800 cursor-pointer">DocGenius</span>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>

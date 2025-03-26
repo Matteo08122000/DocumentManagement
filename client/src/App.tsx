@@ -36,14 +36,14 @@ function App() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="md:hidden text-white"
+              className="sm:hidden text-white"
               onClick={toggleSidebar}
             >
               <Menu className="h-6 w-6" />
             </Button>
             
             {/* Desktop menu */}
-            <nav className="hidden md:flex items-center space-x-4">
+            <nav className="hidden sm:flex items-center space-x-4">
               <Link href="/">
                 <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Dashboard</span>
               </Link>
@@ -66,7 +66,7 @@ function App() {
       
       {/* Mobile sidebar */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 sm:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setIsSidebarOpen(false)}></div>
           <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg p-4 flex flex-col">
             <div className="flex justify-between items-center mb-5 pb-3 border-b">

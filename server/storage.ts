@@ -13,6 +13,7 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUsers(): Map<number, User>;
   createUser(user: InsertUser): Promise<User>;
   updateUserEmail(id: number, email: string): Promise<User | undefined>;
   updateUserNotificationDays(id: number, days: number): Promise<User | undefined>;
@@ -99,6 +100,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
     );
+  }
+  
+  getUsers(): Map<number, User> {
+    return this.users;
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {

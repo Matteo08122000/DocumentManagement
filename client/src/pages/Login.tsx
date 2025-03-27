@@ -21,7 +21,7 @@ import {
 
 // Schema di validazione per il login
 const loginSchema = z.object({
-  username: z.string().min(3, 'Lo username deve contenere almeno 3 caratteri'),
+  email: z.string().email('Inserisci un indirizzo email valido'),
   password: z.string().min(6, 'La password deve contenere almeno 6 caratteri'),
 });
 
@@ -37,7 +37,7 @@ const Login: React.FC = () => {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: '',
+      email: '',
       password: '',
     },
   });
@@ -45,23 +45,12 @@ const Login: React.FC = () => {
   // Gestione del submit del form
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const success = await login(data.username, data.password);
-      if (success) {
-        // Redirect alla dashboard
-        setLocation('/');
-      } else {
-        toast({
-          title: 'Errore di autenticazione',
-          description: 'Username o password non validi',
-          variant: 'destructive',
-        });
-      }
+      await login(data.email, data.password);
+      // Se arriviamo qui, il login è riuscito
+      setLocation('/');
     } catch (error) {
-      toast({
-        title: 'Errore di autenticazione',
-        description: error instanceof Error ? error.message : 'Si è verificato un errore durante il login',
-        variant: 'destructive',
-      });
+      // L'errore è già gestito nella funzione login con un toast
+      console.error('Errore durante il login:', error);
     }
   };
 
@@ -79,12 +68,12 @@ const Login: React.FC = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Il tuo username" {...field} />
+                      <Input placeholder="La tua email" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

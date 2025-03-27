@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
-import { InsertUser } from "@shared/schema";
+import { InsertUser, User } from "@shared/schema";
 
 // Estendi il tipo Request per includere session
 declare module "express-session" {
@@ -12,7 +12,7 @@ declare module "express-session" {
 
 // Valida le credenziali di login
 const loginSchema = z.object({
-  username: z.string().min(3),
+  email: z.string().email("Inserisci un indirizzo email valido"),
   password: z.string().min(6),
 });
 
@@ -38,15 +38,18 @@ export const isAuthenticated = (
     .json({ error: "Non autorizzato. Effettua il login per continuare." });
 };
 
-// Login
+// Login con email invece di username
 export const login = async (req: Request, res: Response) => {
   try {
-    const { username, password } = loginSchema.parse(req.body);
+    const { email, password } = loginSchema.parse(req.body);
 
-    const user = await storage.getUserByUsername(username);
+    // Ottieni tutti gli utenti e filtra per email
+    // In un database reale useremmo una query diretta
+    const users = Array.from(storage.getUsers().values());
+    const user = users.find(u => u.email === email) as User | undefined;
 
     if (!user || user.password !== password) {
-      return res.status(401).json({ error: "Username o password non validi" });
+      return res.status(401).json({ error: "Email o password non validi" });
     }
 
     // Salva l'ID utente nella sessione

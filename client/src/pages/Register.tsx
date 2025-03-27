@@ -2,10 +2,9 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,11 +26,6 @@ const registerSchema = z.object({
     .min(6, 'La password deve contenere almeno 6 caratteri')
     .max(100, 'La password non può superare i 100 caratteri'),
   email: z.string().email('Inserisci un indirizzo email valido'),
-  notificationDays: z
-    .number({ coerce: true })
-    .min(1, 'Il numero di giorni deve essere almeno 1')
-    .max(365, 'Il numero di giorni non può superare 365')
-    .default(30),
 });
 
 // Tipo per i dati del form
@@ -40,6 +34,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const Register: React.FC = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { register, isLoading } = useAuth();
 
   // Configurazione del form con react-hook-form
   const form = useForm<RegisterFormData>({
@@ -48,36 +43,30 @@ const Register: React.FC = () => {
       username: '',
       password: '',
       email: '',
-      notificationDays: 30,
     },
   });
 
-  // Mutation per l'invio dei dati di registrazione
-  const registerMutation = useMutation({
-    mutationFn: async (data: RegisterFormData) => {
-      return apiRequest('POST', '/api/auth/register', data);
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Registrazione completata',
-        description: 'Il tuo account è stato creato con successo! Ora puoi effettuare il login.',
-      });
-      
-      // Redirect alla pagina di login
-      setLocation('/login');
-    },
-    onError: (error) => {
+  // Gestione del submit del form
+  const onSubmit = async (data: RegisterFormData) => {
+    try {
+      const success = await register(data.username, data.password, data.email);
+      if (success) {
+        // Redirect alla pagina di login
+        setLocation('/login');
+      } else {
+        toast({
+          title: 'Errore di registrazione',
+          description: 'Si è verificato un errore durante la registrazione. Lo username potrebbe essere già in uso.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
         title: 'Errore di registrazione',
         description: error instanceof Error ? error.message : 'Si è verificato un errore durante la registrazione',
         variant: 'destructive',
       });
-    },
-  });
-
-  // Gestione del submit del form
-  const onSubmit = (data: RegisterFormData) => {
-    registerMutation.mutate(data);
+    }
   };
 
   return (
@@ -140,34 +129,13 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="notificationDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giorni di notifica</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="30" 
-                        min={1}
-                        max={365}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Numero di giorni prima della scadenza in cui ricevere le notifiche
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
               <Button
                 type="submit"
                 className="w-full"
-                disabled={registerMutation.isPending}
+                disabled={isLoading}
               >
-                {registerMutation.isPending ? 'Registrazione in corso...' : 'Registrati'}
+                {isLoading ? 'Registrazione in corso...' : 'Registrati'}
               </Button>
             </form>
           </Form>
@@ -176,9 +144,9 @@ const Register: React.FC = () => {
           <div className="text-center text-sm">
             Hai già un account?{' '}
             <Link href="/login">
-              <a className="font-medium text-blue-600 hover:text-blue-500">
+              <span className="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">
                 Accedi
-              </a>
+              </span>
             </Link>
           </div>
         </CardFooter>

@@ -12,8 +12,7 @@ import {
   HelpCircle,
   X
 } from 'lucide-react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
@@ -22,9 +21,29 @@ interface SidebarProps {
   closeSidebar: () => void;
 }
 
+// Tipi per i menu item
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+interface AuthNavItemWithHref {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  highlight?: boolean;
+}
+
+interface AuthNavItemWithAction {
+  label: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+}
+
 export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
-  const [location] = useLocation();
-  const { toast } = useToast();
+  const [location, setLocation] = useLocation();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   
   // Chiudi la sidebar quando si cambia pagina (solo mobile)
   useEffect(() => {
@@ -56,38 +75,15 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
     };
   }, [isOpen]);
   
-  // Verifica lo stato di autenticazione
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['/api/auth/me'],
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
-  
-  const isLoggedIn = Boolean(user);
-  
-  // Mutation per il logout
-  const logoutMutation = useMutation({
-    mutationFn: () => {
-      return apiRequest('POST', '/api/auth/logout');
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Logout completato',
-        description: 'Hai effettuato il logout con successo'
-      });
-      // Redirect alla home
-      window.location.href = '/';
-    }
-  });
-  
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  // Gestione logout
+  const handleLogout = async () => {
+    await logout();
+    setLocation('/login');
     closeSidebar();
   };
   
   // Elementi di navigazione principale
-  const navItems = [
+  const navItems: NavItem[] = [
     { 
       label: "Dashboard", 
       href: "/", 
@@ -111,36 +107,36 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
   ];
   
   // Elementi per utenti autenticati/non autenticati
-  const authItems = isLoggedIn
+  const authItems: (AuthNavItemWithHref | AuthNavItemWithAction)[] = isAuthenticated
     ? [
         { 
           label: "Notifiche", 
           href: "/notifiche", 
           icon: <Bell className="h-5 w-5 mr-3" />
-        },
+        } as AuthNavItemWithHref,
         { 
           label: "Profilo", 
           href: "/profilo", 
           icon: <User className="h-5 w-5 mr-3" />
-        },
+        } as AuthNavItemWithHref,
         { 
           label: "Logout", 
           onClick: handleLogout, 
           icon: <LogOut className="h-5 w-5 mr-3" />
-        }
+        } as AuthNavItemWithAction
       ]
     : [
         { 
           label: "Accedi", 
           href: "/login", 
           icon: <LogIn className="h-5 w-5 mr-3" />
-        },
+        } as AuthNavItemWithHref,
         { 
           label: "Registrati", 
           href: "/register", 
           icon: <UserPlus className="h-5 w-5 mr-3" />,
           highlight: true
-        }
+        } as AuthNavItemWithHref
       ];
       
   return (
@@ -206,20 +202,25 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
                 </div>
               ) : (
                 <>
-                  {authItems.map((item, index) => 
-                    item.href ? (
-                      <Link key={index} href={item.href}>
-                        <a className={`
-                          flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors
-                          ${item.highlight 
-                            ? 'bg-blue-700 text-white hover:bg-blue-800' 
-                            : 'text-gray-700 hover:bg-gray-100'}
-                        `}>
-                          {item.icon}
-                          {item.label}
-                        </a>
-                      </Link>
-                    ) : (
+                  {authItems.map((item, index) => {
+                    // Item con href (Link)
+                    if ('href' in item) {
+                      return (
+                        <Link key={index} href={item.href}>
+                          <a className={`
+                            flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors
+                            ${item.highlight 
+                              ? 'bg-blue-700 text-white hover:bg-blue-800' 
+                              : 'text-gray-700 hover:bg-gray-100'}
+                          `}>
+                            {item.icon}
+                            {item.label}
+                          </a>
+                        </Link>
+                      );
+                    }
+                    // Item con onClick (Button)
+                    return (
                       <Button
                         key={index}
                         variant="ghost"
@@ -229,7 +230,8 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
                         {item.icon}
                         {item.label}
                       </Button>
-                    )
+                    );
+                  }
                   )}
                 </>
               )}

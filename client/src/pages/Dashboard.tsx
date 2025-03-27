@@ -7,9 +7,12 @@ import { Document } from '@shared/schema';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useDocumentUpload } from '@/hooks/useDocumentUpload';
 import { useModal } from '@/hooks/useModal';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { Link } from 'wouter';
 
 const Dashboard: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const { refreshDocuments, isUpdating } = useDocuments();
   const { 
     isUploadModalOpen, 
@@ -33,6 +36,33 @@ const Dashboard: React.FC = () => {
   const handleEditDocument = (document: Document) => {
     openDocumentDetailModal(document);
   };
+  
+  // Se l'utente non è autenticato, mostra un messaggio
+  if (!isAuthenticated) {
+    return (
+      <div className="py-20 px-4">
+        <div className="max-w-xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Accesso limitato</h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Per caricare e gestire i documenti è necessario effettuare l'accesso.
+            Puoi visualizzare i documenti pubblici, ma per altre operazioni è richiesta l'autenticazione.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/login">
+              <Button className="w-full sm:w-auto">
+                Accedi
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Registrati
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="py-6">

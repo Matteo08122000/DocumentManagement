@@ -10,14 +10,22 @@ import Register from "@/pages/Register";
 import AboutUs from "@/pages/AboutUs";
 import Support from "@/pages/Support";
 import Footer from "@/components/layout/footer";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
-function App() {
+// Componente per gestire il layout interno all'auth provider
+function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
   
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+  
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await logout();
   };
   
   // Layout completamente responsive
@@ -56,9 +64,33 @@ function App() {
               <Link href="/assistenza">
                 <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Assistenza</span>
               </Link>
-              <Link href="/login">
-                <span className="bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-800 cursor-pointer block">Accedi</span>
-              </Link>
+              
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-white px-3 py-2 text-sm">
+                    <User className="h-4 w-4 inline mr-1" />
+                    {user?.username}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-white hover:bg-blue-700"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Esci
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Link href="/login">
+                    <span className="bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-800 cursor-pointer block">Accedi</span>
+                  </Link>
+                  <Link href="/register">
+                    <span className="bg-white text-blue-700 border border-blue-700 px-4 py-2 rounded text-sm font-medium hover:bg-blue-50 cursor-pointer block">Registrati</span>
+                  </Link>
+                </div>
+              )}
             </nav>
           </div>
         </div>
@@ -94,12 +126,32 @@ function App() {
               
               <div className="border-t my-3"></div>
               
-              <Link href="/login">
-                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Accedi</span>
-              </Link>
-              <Link href="/register">
-                <span className="px-3 py-3 bg-blue-700 text-white hover:bg-blue-800 rounded-md block cursor-pointer">Registrati</span>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <div className="px-3 py-2 text-gray-700">
+                    <User className="h-4 w-4 inline mr-1" />
+                    {user?.username}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center justify-start px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    <span>Esci</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Accedi</span>
+                  </Link>
+                  <Link href="/register">
+                    <span className="px-3 py-3 bg-blue-700 text-white hover:bg-blue-800 rounded-md block cursor-pointer">Registrati</span>
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         </div>
@@ -127,4 +179,13 @@ function App() {
   );
 }
 
-export default App;
+// Componente principale dell'app
+function MainApp() {
+  return (
+    <AuthProvider>
+      <AppLayout />
+    </AuthProvider>
+  );
+}
+
+export default MainApp;

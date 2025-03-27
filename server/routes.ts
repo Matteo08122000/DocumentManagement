@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { isAuthenticated } from "./auth";
 
 // Set up multer for file uploads
 const upload = multer({
@@ -218,8 +219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create a document
-  app.post('/api/documents', async (req, res) => {
+  // Create a document - Solo utenti autenticati
+  app.post('/api/documents', isAuthenticated, async (req, res) => {
     try {
       const documentData = insertDocumentSchema.parse(req.body);
       const document = await storage.createDocument(documentData);
@@ -234,8 +235,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create a document item
-  app.post('/api/documents/:id/items', async (req, res) => {
+  // Create a document item - Solo utenti autenticati
+  app.post('/api/documents/:id/items', isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       
@@ -262,8 +263,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Upload files (supports multiple files)
-  app.post('/api/upload', upload.array('files'), async (req, res) => {
+  // Upload files (supports multiple files) - Solo utenti autenticati
+  app.post('/api/upload', isAuthenticated, upload.array('files'), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
       
@@ -318,8 +319,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Mark document as obsolete and move to obsolete folder
-  app.put('/api/documents/:id/obsolete', async (req, res) => {
+  // Mark document as obsolete and move to obsolete folder - Solo utenti autenticati
+  app.put('/api/documents/:id/obsolete', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const document = await storage.getDocumentById(id);
@@ -345,8 +346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update document
-  app.put('/api/documents/:id', async (req, res) => {
+  // Update document - Solo utenti autenticati
+  app.put('/api/documents/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const documentUpdate = req.body;
@@ -364,8 +365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update document item
-  app.put('/api/documents/items/:id', async (req, res) => {
+  // Update document item - Solo utenti autenticati
+  app.put('/api/documents/items/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const itemUpdate = req.body;
@@ -383,8 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Email notifications
-  app.post('/api/notifications', async (req, res) => {
+  // Email notifications - Solo utenti autenticati
+  app.post('/api/notifications', isAuthenticated, async (req, res) => {
     try {
       const notificationData = insertNotificationSchema.parse(req.body);
       const notification = await storage.createNotification(notificationData);

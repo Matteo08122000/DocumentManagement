@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const Login: React.FC = () => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { login, isLoading } = useAuth();
 
   // Configurazione del form con react-hook-form
   const form = useForm<LoginFormData>({
@@ -41,32 +42,27 @@ const Login: React.FC = () => {
     },
   });
 
-  // Mutation per l'invio dei dati di login
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginFormData) => {
-      return apiRequest('POST', '/api/auth/login', data);
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Login effettuato',
-        description: 'Sei stato autenticato con successo!',
-      });
-      
-      // Redirect alla dashboard
-      setLocation('/');
-    },
-    onError: (error) => {
+  // Gestione del submit del form
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const success = await login(data.username, data.password);
+      if (success) {
+        // Redirect alla dashboard
+        setLocation('/');
+      } else {
+        toast({
+          title: 'Errore di autenticazione',
+          description: 'Username o password non validi',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
         title: 'Errore di autenticazione',
-        description: error instanceof Error ? error.message : 'Username o password non validi',
+        description: error instanceof Error ? error.message : 'Si è verificato un errore durante il login',
         variant: 'destructive',
       });
-    },
-  });
-
-  // Gestione del submit del form
-  const onSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data);
+    }
   };
 
   return (
@@ -110,9 +106,9 @@ const Login: React.FC = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loginMutation.isPending}
+                disabled={isLoading}
               >
-                {loginMutation.isPending ? 'Autenticazione in corso...' : 'Accedi'}
+                {isLoading ? 'Autenticazione in corso...' : 'Accedi'}
               </Button>
             </form>
           </Form>

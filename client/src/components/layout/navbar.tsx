@@ -1,25 +1,23 @@
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Menu, LogOut, User } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavbarProps {
   toggleSidebar: () => void;
 }
 
 export default function Navbar({ toggleSidebar }: NavbarProps) {
-  const [location] = useLocation();
-  
-  // Verifica lo stato di autenticazione
-  const { data: user } = useQuery({
-    queryKey: ['/api/auth/me'],
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minuti
-    refetchOnWindowFocus: false
-  });
-  
-  const isLoggedIn = Boolean(user);
+  const [location, setLocation] = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   
   // Logo testo cliccabile
   const AppLogo = () => (
@@ -43,12 +41,50 @@ export default function Navbar({ toggleSidebar }: NavbarProps) {
     </Button>
   );
   
-  // Componente user
-  const UserStatus = () => (
+  // Gestione logout
+  const handleLogout = async () => {
+    await logout();
+    setLocation('/login');
+  };
+  
+  // Componente user menu autenticato
+  const AuthenticatedMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700">
+          <User className="h-5 w-5 mr-1" />
+          <span className="hidden sm:inline">{user?.username}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem className="cursor-default">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium">{user?.username}</p>
+            <p className="text-xs text-muted-foreground">{user?.email}</p>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Logout</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  
+  // Componente menu non autenticato
+  const UnauthenticatedMenu = () => (
     <div className="hidden md:flex items-center space-x-2">
-      <div className="text-sm text-white">
-        {isLoggedIn ? 'Benvenuto!' : 'Accedi per iniziare'}
-      </div>
+      <Link href="/login">
+        <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700">
+          Accedi
+        </Button>
+      </Link>
+      <Link href="/register">
+        <Button size="sm" className="bg-white text-blue-800 hover:bg-gray-100">
+          Registrati
+        </Button>
+      </Link>
     </div>
   );
 
@@ -61,7 +97,7 @@ export default function Navbar({ toggleSidebar }: NavbarProps) {
           </div>
           
           <div className="ml-auto flex items-center gap-4">
-            <UserStatus />
+            {isAuthenticated ? <AuthenticatedMenu /> : <UnauthenticatedMenu />}
             <MobileMenuButton />
           </div>
         </div>

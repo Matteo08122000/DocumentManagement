@@ -19,15 +19,42 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Funzione di sanitizzazione per prevenire SQL injection
+function sanitizeInput(data: any): any {
+  if (typeof data === 'string') {
+    // Rimuovi caratteri potenzialmente pericolosi per SQL injection
+    return data.replace(/['";\\]/g, '');
+  } else if (Array.isArray(data)) {
+    return data.map(item => sanitizeInput(item));
+  } else if (data !== null && typeof data === 'object') {
+    const sanitized: any = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        sanitized[key] = sanitizeInput(data[key]);
+      }
+    }
+    return sanitized;
+  }
+  return data;
+}
+
 export async function apiRequest<T = any>(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<T> {
+  // Sanitizza i dati di input per prevenire SQL injection
+  const sanitizedData = data ? sanitizeInput(data) : undefined;
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: sanitizedData ? { 
+      "Content-Type": "application/json",
+      // Aggiunge header di sicurezza aggiuntivi
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY" 
+    } : {},
+    body: sanitizedData ? JSON.stringify(sanitizedData) : undefined,
     credentials: "include",
   });
 

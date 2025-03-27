@@ -453,6 +453,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint per il supporto
+  app.post('/api/support', async (req, res) => {
+    try {
+      // Verifica che la risposta sia JSON
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Valida i dati di input
+      const { name, email, subject, message } = req.body;
+      
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ 
+          error: 'Dati mancanti', 
+          message: 'Tutti i campi sono obbligatori' 
+        });
+      }
+      
+      // In una implementazione reale, qui salveremmo il messaggio o invieremmo una email
+      console.log('Messaggio di supporto ricevuto:', { name, email, subject, message });
+      
+      // Invio risposta di successo
+      res.status(200).json({ 
+        success: true, 
+        message: 'Messaggio inviato con successo' 
+      });
+    } catch (error) {
+      console.error('Errore nell\'elaborazione della richiesta di supporto:', error);
+      res.status(500).json({ 
+        error: 'Errore del server', 
+        message: 'Si è verificato un errore durante l\'elaborazione della richiesta' 
+      });
+    }
+  });
+
   // Get document statistics
   app.get('/api/statistics', async (req, res) => {
     try {

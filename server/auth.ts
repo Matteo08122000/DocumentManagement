@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { InsertUser, User } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 // Estendi il tipo Request per includere session
 declare module "express-session" {
@@ -48,7 +49,15 @@ export const login = async (req: Request, res: Response) => {
     const users = Array.from(storage.getUsers().values());
     const user = users.find(u => u.email === email) as User | undefined;
 
-    if (!user || user.password !== password) {
+    // Verifica se l'utente esiste
+    if (!user) {
+      return res.status(401).json({ error: "Email o password non validi" });
+    }
+    
+    // Verifica la password utilizzando bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
       return res.status(401).json({ error: "Email o password non validi" });
     }
 
@@ -87,11 +96,22 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Username già in uso" });
     }
 
-    // Crea il nuovo utente con valori di default per campi mancanti
+    // Controlla se l'email esiste già
+    const users = Array.from(storage.getUsers().values());
+    const existingEmail = users.find(u => u.email === userData.email);
+    
+    if (existingEmail) {
+      return res.status(400).json({ error: "Email già in uso" });
+    }
+
+    // Hash della password con salt 10
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    
+    // Crea il nuovo utente con password hashata
     const newUser = await storage.createUser({
       username: userData.username,
       email: userData.email,
-      password: userData.password,
+      password: hashedPassword,
     });
 
     // Rimuovi la password prima di inviare i dati utente

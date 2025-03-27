@@ -47,9 +47,16 @@ const Support: React.FC = () => {
   // Mutation per l'invio del messaggio di supporto
   const supportMutation = useMutation({
     mutationFn: async (data: SupportFormData) => {
-      return apiRequest('POST', '/api/support', data);
+      const response = await apiRequest('POST', '/api/support', data);
+      // Verifica che la risposta sia in formato JSON prima di restituirla
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+      } else {
+        throw new Error("Errore del server: Risposta non valida");
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: 'Messaggio inviato',
         description: 'Il tuo messaggio è stato inviato con successo. Ti risponderemo al più presto.',

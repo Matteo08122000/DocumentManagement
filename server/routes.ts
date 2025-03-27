@@ -160,6 +160,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Verifica se l'utente è autenticato per qualsiasi richiesta di documenti
+      // @ts-ignore - req.session è definito dal middleware express-session
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ message: 'Autenticazione richiesta per accedere ai documenti' });
+      }
+      
       const documents = await storage.getDocuments(includeObsolete);
       
       // Filter to only return parent documents (no parentId)
@@ -180,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get document by ID
-  app.get('/api/documents/:id', async (req, res) => {
+  app.get('/api/documents/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const document = await storage.getDocumentById(id);
@@ -197,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get child documents by parent ID
-  app.get('/api/documents/:id/children', async (req, res) => {
+  app.get('/api/documents/:id/children', isAuthenticated, async (req, res) => {
     try {
       const parentId = parseInt(req.params.id);
       const children = await storage.getChildDocuments(parentId);
@@ -217,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get document items by document ID
-  app.get('/api/documents/:id/items', async (req, res) => {
+  app.get('/api/documents/:id/items', isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       const items = await storage.getDocumentItems(documentId);

@@ -54,11 +54,10 @@ const Register: React.FC = () => {
         // Redirect alla pagina di login
         setLocation('/login');
       }
-      // Gli errori sono già gestiti nel hook use-auth
     } catch (error) {
       toast({
         title: 'Errore di registrazione',
-        description: error instanceof Error ? error.message : 'Si è verificato un errore durante la registrazione',
+        description: error instanceof Error ? error.message : 'Risposta non valida: impossibile processare i dati ricevuti',
         variant: 'destructive',
       });
     }
@@ -101,9 +100,6 @@ const Register: React.FC = () => {
                     <FormControl>
                       <Input type="email" placeholder="La tua email" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      La tua email verrà utilizzata per le notifiche di documenti in scadenza
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

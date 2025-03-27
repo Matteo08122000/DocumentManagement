@@ -78,13 +78,21 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username già in uso' });
     }
     
-    // Crea il nuovo utente
-    const newUser = await storage.createUser(userData as InsertUser);
+    // Crea il nuovo utente con valori di default per campi mancanti
+    const newUser = await storage.createUser({
+      username: userData.username,
+      password: userData.password,
+      email: userData.email,
+      notificationDays: 15 // Valore di default
+    });
     
     // Rimuovi la password prima di inviare i dati utente
     const { password: _, ...newUserData } = newUser;
     
-    res.status(201).json({
+    // Imposta la sessione dopo la registrazione (auto-login)
+    req.session.userId = newUser.id;
+    
+    res.status(200).json({
       message: 'Utente registrato con successo',
       user: newUserData
     });

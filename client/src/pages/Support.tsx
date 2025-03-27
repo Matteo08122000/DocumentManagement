@@ -53,8 +53,8 @@ const Support: React.FC = () => {
   const { data: userReport, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/clean-users'],
     queryFn: async () => {
-      const response = await apiRequest('POST', '/api/clean-users');
-      return await response.json();
+      // apiRequest già restituisce il JSON processato
+      return await apiRequest('POST', '/api/clean-users');
     },
     enabled: false, // Non eseguire la query automaticamente
   });
@@ -62,8 +62,8 @@ const Support: React.FC = () => {
   // Mutation per pulire gli utenti con password non hashate
   const cleanUsersMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/clean-users');
-      return await response.json();
+      // apiRequest già restituisce il JSON processato
+      return await apiRequest('POST', '/api/clean-users');
     },
     onSuccess: (data) => {
       toast({
@@ -98,14 +98,8 @@ const Support: React.FC = () => {
   // Mutation per l'invio del messaggio di supporto
   const supportMutation = useMutation({
     mutationFn: async (data: SupportFormData) => {
-      const response = await apiRequest('POST', '/api/support', data);
-      // Verifica che la risposta sia in formato JSON prima di restituirla
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        return await response.json();
-      } else {
-        throw new Error("Errore del server: Risposta non valida");
-      }
+      // apiRequest già restituisce il JSON processato
+      return await apiRequest('POST', '/api/support', data);
     },
     onSuccess: (data) => {
       toast({

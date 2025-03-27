@@ -81,16 +81,7 @@ function AppLayout() {
                     Esci
                   </Button>
                 </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Link href="/login">
-                    <span className="bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-800 cursor-pointer block">Accedi</span>
-                  </Link>
-                  <Link href="/register">
-                    <span className="bg-white text-blue-700 border border-blue-700 px-4 py-2 rounded text-sm font-medium hover:bg-blue-50 cursor-pointer block">Registrati</span>
-                  </Link>
-                </div>
-              )}
+              ) : null}
             </nav>
           </div>
         </div>
@@ -142,16 +133,7 @@ function AppLayout() {
                     <span>Esci</span>
                   </Button>
                 </>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Accedi</span>
-                  </Link>
-                  <Link href="/register">
-                    <span className="px-3 py-3 bg-blue-700 text-white hover:bg-blue-800 rounded-md block cursor-pointer">Registrati</span>
-                  </Link>
-                </>
-              )}
+              ) : null}
             </nav>
           </div>
         </div>

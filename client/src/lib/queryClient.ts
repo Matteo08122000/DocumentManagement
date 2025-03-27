@@ -2,8 +2,20 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorText: string;
+    try {
+      // Prova a interpretare la risposta come JSON
+      const errorData = await res.json();
+      errorText = errorData.error || res.statusText;
+    } catch (e) {
+      // Se non è JSON, usa il testo grezzo o lo statusText
+      try {
+        errorText = await res.text() || res.statusText;
+      } catch (e2) {
+        errorText = res.statusText;
+      }
+    }
+    throw new Error(`${res.status}: ${errorText}`);
   }
 }
 
@@ -20,7 +32,17 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
-  return await res.json() as T;
+  
+  // Gestiamo il caso in cui la risposta non contenga JSON
+  try {
+    return await res.json() as T;
+  } catch (e) {
+    if (res.status === 204) {
+      // 204 No Content - è una risposta valida ma vuota
+      return {} as T;
+    }
+    throw new Error("Risposta non valida: impossibile processare i dati ricevuti");
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -38,7 +60,17 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    
+    // Gestiamo il caso in cui la risposta non contenga JSON
+    try {
+      return await res.json();
+    } catch (e) {
+      if (res.status === 204) {
+        // 204 No Content - è una risposta valida ma vuota
+        return {} as T;
+      }
+      throw new Error("Risposta non valida: impossibile processare i dati ricevuti");
+    }
   };
 
 export const queryClient = new QueryClient({

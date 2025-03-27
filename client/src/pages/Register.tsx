@@ -53,13 +53,8 @@ const Register: React.FC = () => {
       if (success) {
         // Redirect alla pagina di login
         setLocation('/login');
-      } else {
-        toast({
-          title: 'Errore di registrazione',
-          description: 'Si è verificato un errore durante la registrazione. Lo username potrebbe essere già in uso.',
-          variant: 'destructive',
-        });
       }
+      // Gli errori sono già gestiti nel hook use-auth
     } catch (error) {
       toast({
         title: 'Errore di registrazione',

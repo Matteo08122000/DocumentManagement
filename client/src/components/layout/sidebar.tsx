@@ -106,7 +106,7 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
     },
   ];
   
-  // Elementi per utenti autenticati/non autenticati
+  // Elementi solo per utenti autenticati
   const authItems: (AuthNavItemWithHref | AuthNavItemWithAction)[] = isAuthenticated
     ? [
         { 
@@ -125,19 +125,7 @@ export default function Sidebar({ isOpen, closeSidebar }: SidebarProps) {
           icon: <LogOut className="h-5 w-5 mr-3" />
         } as AuthNavItemWithAction
       ]
-    : [
-        { 
-          label: "Accedi", 
-          href: "/login", 
-          icon: <LogIn className="h-5 w-5 mr-3" />
-        } as AuthNavItemWithHref,
-        { 
-          label: "Registrati", 
-          href: "/register", 
-          icon: <UserPlus className="h-5 w-5 mr-3" />,
-          highlight: true
-        } as AuthNavItemWithHref
-      ];
+    : [];
       
   return (
     <>

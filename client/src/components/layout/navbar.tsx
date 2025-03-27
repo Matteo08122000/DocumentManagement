@@ -52,8 +52,10 @@ export default function Navbar({ toggleSidebar }: NavbarProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700">
-          <User className="h-5 w-5 mr-1" />
-          <span className="hidden sm:inline">{user?.username}</span>
+          <User className="h-5 w-5" />
+          {user?.username && (
+            <span className="hidden sm:inline ml-1">{user.username}</span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -72,21 +74,8 @@ export default function Navbar({ toggleSidebar }: NavbarProps) {
     </DropdownMenu>
   );
   
-  // Componente menu non autenticato
-  const UnauthenticatedMenu = () => (
-    <div className="hidden md:flex items-center space-x-2">
-      <Link href="/login">
-        <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700">
-          Accedi
-        </Button>
-      </Link>
-      <Link href="/register">
-        <Button size="sm" className="bg-white text-blue-800 hover:bg-gray-100">
-          Registrati
-        </Button>
-      </Link>
-    </div>
-  );
+  // Per utenti non autenticati, nessun menu nella navbar
+  const UnauthenticatedMenu = () => null;
 
   return (
     <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-md sticky top-0 z-30">

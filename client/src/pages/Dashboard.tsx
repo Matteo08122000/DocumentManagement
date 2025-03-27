@@ -42,10 +42,10 @@ const Dashboard: React.FC = () => {
     return (
       <div className="py-20 px-4">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Accesso limitato</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Accesso richiesto</h2>
           <p className="text-lg text-gray-600 mb-8">
             Per caricare e gestire i documenti è necessario effettuare l'accesso.
-            Puoi visualizzare i documenti pubblici, ma per altre operazioni è richiesta l'autenticazione.
+            Solo gli utenti autenticati possono accedere all'archivio documenti.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/login">

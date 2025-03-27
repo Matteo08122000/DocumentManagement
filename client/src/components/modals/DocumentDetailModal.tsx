@@ -50,6 +50,29 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
       status: 'valid'
     }
   });
+
+  // Display items with status
+  const renderItems = () => {
+    if (isLoadingItems) return <div>Caricamento elementi...</div>;
+    
+    return (
+      <div className="space-y-4">
+        {items.map((item) => (
+          <div key={item.id} className="p-4 border rounded-lg">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">{item.title}</h3>
+              <StatusEmoji status={item.status} />
+            </div>
+            <p className="text-sm text-gray-600">{item.description}</p>
+            <div className="mt-2 text-sm">
+              <div>Scadenza: {formatDate(item.expirationDate)}</div>
+              <div>Preavviso: {item.notificationDays} giorni</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
   
   // Reset form when modal closes
   useEffect(() => {

@@ -55,9 +55,11 @@ function AppLayout() {
               <Link href="/">
                 <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Dashboard</span>
               </Link>
-              <Link href="/obsoleti">
-                <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Documenti Obsoleti</span>
-              </Link>
+              {isAuthenticated && (
+                <Link href="/obsoleti">
+                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Documenti Obsoleti</span>
+                </Link>
+              )}
               <Link href="/chi-siamo">
                 <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Chi Siamo</span>
               </Link>
@@ -105,9 +107,11 @@ function AppLayout() {
               <Link href="/">
                 <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Dashboard</span>
               </Link>
-              <Link href="/obsoleti">
-                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Documenti Obsoleti</span>
-              </Link>
+              {isAuthenticated && (
+                <Link href="/obsoleti">
+                  <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Documenti Obsoleti</span>
+                </Link>
+              )}
               <Link href="/chi-siamo">
                 <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Chi Siamo</span>
               </Link>

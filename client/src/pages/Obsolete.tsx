@@ -5,8 +5,38 @@ import { formatDate } from '@/lib/dateUtils';
 import FileIcon from '@/components/ui/FileIcon';
 import StatusEmoji from '@/components/ui/StatusEmoji';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/use-auth';
+import { Link } from 'wouter';
 
 const Obsolete: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  
+  // Se l'utente non è autenticato, mostra un messaggio di accesso richiesto
+  if (!isAuthenticated) {
+    return (
+      <div className="py-20 px-4">
+        <div className="max-w-xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Accesso richiesto</h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Per visualizzare i documenti obsoleti è necessario effettuare l'accesso.
+            Solo gli utenti autenticati possono accedere a questa sezione per motivi di sicurezza.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/login">
+              <Button className="w-full sm:w-auto">
+                Accedi
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Registrati
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const { data: documents, isLoading, error } = useQuery<Document[]>({
     queryKey: ['/api/documents'],
     queryFn: async () => {

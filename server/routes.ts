@@ -151,6 +151,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/documents', async (req, res) => {
     try {
       const includeObsolete = req.query.includeObsolete === 'true';
+      
+      // Se si richiede di includere documenti obsoleti, verificare se l'utente è autenticato
+      if (includeObsolete) {
+        // @ts-ignore - req.session è definito dal middleware express-session
+        if (!req.session || !req.session.userId) {
+          return res.status(401).json({ message: 'Autenticazione richiesta per accedere ai documenti obsoleti' });
+        }
+      }
+      
       const documents = await storage.getDocuments(includeObsolete);
       
       // Filter to only return parent documents (no parentId)
@@ -423,12 +432,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/statistics', async (req, res) => {
     try {
       const documents = await storage.getDocuments();
-      const obsolete = await storage.getDocuments(true);
+      
+      // Per le statistiche dei documenti obsoleti, è necessario essere autenticati
+      let obsoleteCount = 0;
+      
+      // @ts-ignore - req.session è definito dal middleware express-session
+      if (req.session && req.session.userId) {
+        const obsolete = await storage.getDocuments(true);
+        obsoleteCount = obsolete.filter(doc => doc.isObsolete).length;
+      }
       
       const valid = documents.filter(doc => doc.status === documentStatus.VALID).length;
       const expiring = documents.filter(doc => doc.status === documentStatus.EXPIRING).length;
       const expired = documents.filter(doc => doc.status === documentStatus.EXPIRED).length;
-      const obsoleteCount = obsolete.filter(doc => doc.isObsolete).length;
       
       res.json({
         valid,

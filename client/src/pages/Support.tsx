@@ -85,17 +85,17 @@ const Support: React.FC = () => {
                 <CardDescription>Siamo qui per aiutarti</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start">
+                <div className="flex items-center">
                   <span className="material-icons-round text-primary-600 mr-2 flex-shrink-0">email</span>
-                  <span className="text-sm break-all">supporto@esempio.com</span>
+                  <span className="text-sm whitespace-nowrap">supporto@esempio.com</span>
                 </div>
-                <div className="flex items-start">
+                <div className="flex items-center">
                   <span className="material-icons-round text-primary-600 mr-2 flex-shrink-0">phone</span>
-                  <span className="text-sm break-all">+39 123 456 7890</span>
+                  <span className="text-sm whitespace-nowrap">+39 123 456 7890</span>
                 </div>
-                <div className="flex items-start">
+                <div className="flex items-center">
                   <span className="material-icons-round text-primary-600 mr-2 flex-shrink-0">schedule</span>
-                  <span className="text-sm break-all">Lun-Ven: 9:00-18:00</span>
+                  <span className="text-sm whitespace-nowrap">Lun-Ven: 9:00-18:00</span>
                 </div>
               </CardContent>
             </Card>

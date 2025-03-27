@@ -35,40 +35,45 @@ function AppLayout() {
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-md sticky top-0 z-30">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            {/* Desktop navbar con logo e menu a sinistra */}
+            <div className="flex items-center space-x-1">
               <Link href="/">
-                <span className="text-xl font-bold cursor-pointer">DocGenius</span>
-              </Link>
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="sm:hidden text-white"
-              onClick={toggleSidebar}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            
-            {/* Desktop menu */}
-            <nav className="hidden sm:flex items-center space-x-4">
-              <Link href="/">
-                <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Dashboard</span>
-              </Link>
-              {isAuthenticated && (
-                <Link href="/obsoleti">
-                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Documenti Obsoleti</span>
-                </Link>
-              )}
-              <Link href="/chi-siamo">
-                <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Chi Siamo</span>
-              </Link>
-              <Link href="/assistenza">
-                <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Assistenza</span>
+                <span className="text-xl font-bold cursor-pointer mr-4">DocGenius</span>
               </Link>
               
+              {/* Desktop menu - spostato a sinistra accanto al logo */}
+              <div className="hidden sm:flex items-center">
+                <Link href="/">
+                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Dashboard</span>
+                </Link>
+                {isAuthenticated && (
+                  <Link href="/obsoleti">
+                    <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Documenti Obsoleti</span>
+                  </Link>
+                )}
+                <Link href="/chi-siamo">
+                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Chi Siamo</span>
+                </Link>
+                <Link href="/assistenza">
+                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Assistenza</span>
+                </Link>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              {/* Bottone menu mobile */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="sm:hidden text-white"
+                onClick={toggleSidebar}
+              >
+                <Menu className="h-6 w-6" />
+              </Button>
+              
+              {/* User menu a destra */}
               {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
+                <div className="hidden sm:flex items-center space-x-3">
                   <div className="text-white px-3 py-2 text-sm">
                     <User className="h-4 w-4 inline mr-1" />
                     {user?.username}
@@ -84,7 +89,7 @@ function AppLayout() {
                   </Button>
                 </div>
               ) : null}
-            </nav>
+            </div>
           </div>
         </div>
       </header>

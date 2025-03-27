@@ -315,9 +315,6 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
             <Button type="button" variant="outline" onClick={onClose}>
               Chiudi
             </Button>
-            <Button type="button">
-              Salva Modifiche
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

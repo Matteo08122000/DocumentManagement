@@ -11,7 +11,8 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { isAuthenticated } from "./auth";
+import * as auth from "./auth";
+const { isAuthenticated } = auth;
 
 // Set up multer for file uploads
 const upload = multer({
@@ -144,6 +145,24 @@ const calculateStatus = (expirationDate: Date | null, notificationDays: number =
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  // Rotte di autenticazione
+
+  // Routes di autenticazione
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      // Assicuriamoci che la risposta sia in formato JSON
+      res.setHeader('Content-Type', 'application/json');
+      await auth.register(req, res);
+    } catch (error) {
+      console.error('Errore durante la registrazione:', error);
+      res.status(500).json({ error: 'Errore durante la registrazione' });
+    }
+  });
+  
+  app.post('/api/auth/login', auth.login);
+  app.post('/api/auth/logout', auth.logout);
+  app.get('/api/auth/current-user', auth.getCurrentUser);
 
   // Set up routes with /api prefix
   

@@ -49,17 +49,12 @@ const Register: React.FC = () => {
   // Gestione del submit del form
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const success = await register(data.username, data.password, data.email);
-      if (success) {
-        // Redirect alla pagina di login
-        setLocation('/login');
-      }
+      await register(data.username, data.password, data.email);
+      // Se la registrazione ha successo, reindirizza alla pagina di login
+      setLocation('/login');
     } catch (error) {
-      toast({
-        title: 'Errore di registrazione',
-        description: error instanceof Error ? error.message : 'Risposta non valida: impossibile processare i dati ricevuti',
-        variant: 'destructive',
-      });
+      // Errori già gestiti nel hook di auth, ma possiamo aggiungere qui una gestione extra
+      console.error("Errore nella gestione del form:", error);
     }
   };
 

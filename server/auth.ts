@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { storage } from './storage';
-import { InsertUser } from '@shared/schema';
+import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
+import { storage } from "./storage";
+import { InsertUser } from "@shared/schema";
 
 // Estendi il tipo Request per includere session
-declare module 'express-session' {
+declare module "express-session" {
   interface SessionData {
     userId?: number;
   }
@@ -19,50 +19,56 @@ const loginSchema = z.object({
 // Valida i dati di registrazione
 const registerSchema = z.object({
   username: z.string().min(3),
-  password: z.string().min(6),
   email: z.string().email(),
+  password: z.string().min(6),
 });
 
 // Verifica se l'utente è autenticato
-export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+export const isAuthenticated = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   if (req.session && req.session.userId) {
     return next();
   }
-  
-  res.status(401).json({ error: 'Non autorizzato. Effettua il login per continuare.' });
+
+  res
+    .status(401)
+    .json({ error: "Non autorizzato. Effettua il login per continuare." });
 };
 
 // Login
 export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = loginSchema.parse(req.body);
-    
+
     const user = await storage.getUserByUsername(username);
-    
+
     if (!user || user.password !== password) {
-      return res.status(401).json({ error: 'Username o password non validi' });
+      return res.status(401).json({ error: "Username o password non validi" });
     }
-    
+
     // Salva l'ID utente nella sessione
     req.session.userId = user.id;
-    
+
     // Rimuovi la password prima di inviare i dati utente
     const { password: _, ...userData } = user;
-    
-    res.status(200).json({ 
-      message: 'Login effettuato con successo',
-      user: userData
+
+    res.status(200).json({
+      message: "Login effettuato con successo",
+      user: userData,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ 
-        error: 'Dati non validi', 
-        details: error.errors 
+      return res.status(400).json({
+        error: "Dati non validi",
+        details: error.errors,
       });
     }
-    
-    console.error('Errore di login:', error);
-    res.status(500).json({ error: 'Errore durante il login' });
+
+    console.error("Errore di login:", error);
+    res.status(500).json({ error: "Errore durante il login" });
   }
 };
 
@@ -70,42 +76,41 @@ export const login = async (req: Request, res: Response) => {
 export const register = async (req: Request, res: Response) => {
   try {
     const userData = registerSchema.parse(req.body);
-    
+
     // Controlla se l'username esiste già
     const existingUser = await storage.getUserByUsername(userData.username);
-    
+
     if (existingUser) {
-      return res.status(400).json({ error: 'Username già in uso' });
+      return res.status(400).json({ error: "Username già in uso" });
     }
-    
+
     // Crea il nuovo utente con valori di default per campi mancanti
     const newUser = await storage.createUser({
       username: userData.username,
-      password: userData.password,
       email: userData.email,
-      notificationDays: 15 // Valore di default
+      password: userData.password,
     });
-    
+
     // Rimuovi la password prima di inviare i dati utente
     const { password: _, ...newUserData } = newUser;
-    
+
     // Imposta la sessione dopo la registrazione (auto-login)
     req.session.userId = newUser.id;
-    
+
     res.status(200).json({
-      message: 'Utente registrato con successo',
-      user: newUserData
+      message: "Utente registrato con successo",
+      user: newUserData,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ 
-        error: 'Dati non validi', 
-        details: error.errors 
+      return res.status(400).json({
+        error: "Dati non validi",
+        details: error.errors,
       });
     }
-    
-    console.error('Errore di registrazione:', error);
-    res.status(500).json({ error: 'Errore durante la registrazione' });
+
+    console.error("Errore di registrazione:", error);
+    res.status(500).json({ error: "Errore durante la registrazione" });
   }
 };
 
@@ -113,11 +118,11 @@ export const register = async (req: Request, res: Response) => {
 export const logout = (req: Request, res: Response) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error('Errore durante il logout:', err);
-      return res.status(500).json({ error: 'Errore durante il logout' });
+      console.error("Errore durante il logout:", err);
+      return res.status(500).json({ error: "Errore durante il logout" });
     }
-    
-    res.status(200).json({ message: 'Logout effettuato con successo' });
+
+    res.status(200).json({ message: "Logout effettuato con successo" });
   });
 };
 
@@ -125,21 +130,23 @@ export const logout = (req: Request, res: Response) => {
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     if (!req.session.userId) {
-      return res.status(401).json({ error: 'Non autenticato' });
+      return res.status(401).json({ error: "Non autenticato" });
     }
-    
+
     const user = await storage.getUser(req.session.userId);
-    
+
     if (!user) {
-      return res.status(404).json({ error: 'Utente non trovato' });
+      return res.status(404).json({ error: "Utente non trovato" });
     }
-    
+
     // Rimuovi la password prima di inviare i dati utente
     const { password: _, ...userData } = user;
-    
+
     res.status(200).json(userData);
   } catch (error) {
-    console.error('Errore nel recupero dell\'utente corrente:', error);
-    res.status(500).json({ error: 'Errore durante il recupero dei dati utente' });
+    console.error("Errore nel recupero dell'utente corrente:", error);
+    res
+      .status(500)
+      .json({ error: "Errore durante il recupero dei dati utente" });
   }
 };

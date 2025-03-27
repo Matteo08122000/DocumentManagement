@@ -10,7 +10,7 @@ async function throwIfResNotOk(res: Response) {
     } catch (e) {
       // Se non è JSON, usa il testo grezzo o lo statusText
       try {
-        errorText = await res.text() || res.statusText;
+        errorText = (await res.text()) || res.statusText;
       } catch (e2) {
         errorText = res.statusText;
       }
@@ -31,17 +31,23 @@ export async function apiRequest<T = any>(
     credentials: "include",
   });
 
+  // Verifica se la risposta del server è HTML e non JSON
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("text/html")) {
+    throw new Error("Errore del server: risposta HTML anziché JSON.");
+  }
+
   await throwIfResNotOk(res);
-  
-  // Gestiamo il caso in cui la risposta non contenga JSON
+
   try {
-    return await res.json() as T;
+    return (await res.json()) as T;
   } catch (e) {
     if (res.status === 204) {
-      // 204 No Content - è una risposta valida ma vuota
       return {} as T;
     }
-    throw new Error("Risposta non valida: impossibile processare i dati ricevuti");
+    throw new Error(
+      "Risposta non valida: impossibile processare i dati ricevuti",
+    );
   }
 }
 
@@ -60,7 +66,7 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    
+
     // Gestiamo il caso in cui la risposta non contenga JSON
     try {
       return await res.json();
@@ -69,7 +75,9 @@ export const getQueryFn: <T>(options: {
         // 204 No Content - è una risposta valida ma vuota
         return {} as T;
       }
-      throw new Error("Risposta non valida: impossibile processare i dati ricevuti");
+      throw new Error(
+        "Risposta non valida: impossibile processare i dati ricevuti",
+      );
     }
   };
 

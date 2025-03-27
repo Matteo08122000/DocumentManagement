@@ -17,6 +17,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserEmail(id: number, email: string): Promise<User | undefined>;
   updateUserNotificationDays(id: number, days: number): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Document methods
   getDocuments(includeObsolete?: boolean): Promise<Document[]>;
@@ -129,6 +130,10 @@ export class MemStorage implements IStorage {
     const updated = { ...user, notificationDays: days };
     this.users.set(id, updated);
     return updated;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
   }
   
   // Document methods

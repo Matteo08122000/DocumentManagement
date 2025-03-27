@@ -453,6 +453,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint temporaneo per eliminare utenti con password non hashate
+  app.post('/api/clean-users', async (req, res) => {
+    try {
+      // Imposta esplicitamente l'header Content-Type per JSON
+      res.setHeader('Content-Type', 'application/json');
+      // Ottieni tutti gli utenti
+      const users = Array.from(storage.getUsers().values());
+      console.log(`Utenti totali nel sistema: ${users.length}`);
+      
+      // Conta gli utenti con password hashata (inizia con $2b$)
+      const hashedUsers = users.filter(user => user.password.startsWith('$2b$'));
+      console.log(`Utenti con password hashata: ${hashedUsers.length}`);
+      
+      // Identifica gli utenti con password non hashata
+      const nonHashedUsers = users.filter(user => !user.password.startsWith('$2b$'));
+      console.log(`Utenti con password non hashata: ${nonHashedUsers.length}`);
+      
+      // Elimina gli utenti con password non hashata
+      const deletedUsers = [];
+      for (const user of nonHashedUsers) {
+        const deleted = await storage.deleteUser(user.id);
+        if (deleted) {
+          deletedUsers.push({
+            id: user.id,
+            username: user.username,
+            email: user.email
+          });
+        }
+      }
+      
+      // Ottieni la lista aggiornata
+      const updatedUsers = Array.from(storage.getUsers().values());
+      
+      res.json({
+        before: users.length,
+        after: updatedUsers.length,
+        deleted: deletedUsers.length,
+        deletedUsers: deletedUsers,
+        remainingUsers: updatedUsers.map(u => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          isHashed: u.password.startsWith('$2b$')
+        }))
+      });
+    } catch (error) {
+      console.error('Errore nell\'operazione di pulizia utenti:', error);
+      res.status(500).json({ 
+        error: 'Errore del server', 
+        message: 'Si è verificato un errore durante l\'operazione' 
+      });
+    }
+  });
+
   // Endpoint per il supporto
   app.post('/api/support', async (req, res) => {
     try {

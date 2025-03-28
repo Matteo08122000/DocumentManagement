@@ -7,14 +7,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Configurazione della sessione
+// Configurazione della sessione con opzioni migliorate
 app.use(session({
   secret: "docgenius-secret-key",
   resave: false,
   saveUninitialized: false,
+  name: "docgenius.sid", // Nome personalizzato del cookie
   cookie: { 
     secure: process.env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24, // 24 ore
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 giorni (aumentato da 24 ore)
     httpOnly: true,
     sameSite: 'lax'
   }

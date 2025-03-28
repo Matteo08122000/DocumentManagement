@@ -50,8 +50,9 @@ const Register: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       await register(data.username, data.password, data.email);
-      // Se la registrazione ha successo, reindirizza alla pagina di login
-      setLocation('/login');
+      // Se la registrazione ha successo, reindirizza alla pagina principale (dashboard)
+      // Ora che abbiamo implementato l'auto-login dopo la registrazione
+      setLocation('/');
     } catch (error) {
       // Errori già gestiti nel hook di auth, ma possiamo aggiungere qui una gestione extra
       console.error("Errore nella gestione del form:", error);

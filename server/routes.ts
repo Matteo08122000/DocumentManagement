@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rotte di autenticazione
 
-  // Routes di autenticazione
+  // Rotte di autenticazione standardizzate sotto "/api/auth"
   app.post('/api/auth/register', async (req, res) => {
     try {
       // Assicuriamoci che la risposta sia in formato JSON
@@ -163,6 +163,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', auth.login);
   app.post('/api/auth/logout', auth.logout);
   app.get('/api/auth/current-user', auth.getCurrentUser);
+  
+  // Routes di autenticazione per retrocompatibilità (reindirizzano ai nuovi percorsi)
+  app.post('/api/register', (req, res) => {
+    console.log('Reindirizzamento da /api/register a /api/auth/register');
+    req.url = '/api/auth/register';
+    app._router.handle(req, res);
+  });
+  
+  app.post('/api/login', (req, res) => {
+    console.log('Reindirizzamento da /api/login a /api/auth/login');
+    req.url = '/api/auth/login';
+    app._router.handle(req, res);
+  });
+  
+  app.post('/api/logout', (req, res) => {
+    console.log('Reindirizzamento da /api/logout a /api/auth/logout');
+    req.url = '/api/auth/logout';
+    app._router.handle(req, res);
+  });
+  
+  app.get('/api/user', (req, res) => {
+    console.log('Reindirizzamento da /api/user a /api/auth/current-user');
+    req.url = '/api/auth/current-user';
+    app._router.handle(req, res);
+  });
 
   // Set up routes with /api prefix
   

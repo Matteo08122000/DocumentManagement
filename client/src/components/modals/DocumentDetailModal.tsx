@@ -38,16 +38,21 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
   const { data: items = [], isLoading: isLoadingItems, error: itemsError } = useQuery<DocumentItem[]>({
     queryKey: ['/api/documents', document?.id, 'items'],
     enabled: !!document?.id && isOpen,
-    onSuccess: (data) => {
-      console.log('Elementi caricati con successo:', data);
-    },
-    onError: (error) => {
-      console.error('Errore caricamento elementi:', error);
-      toast({
-        title: 'Errore',
-        description: `Impossibile caricare gli elementi controllati: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
-        variant: 'destructive'
+    queryFn: async ({ queryKey }) => {
+      // L'endpoint restituisce un array vuoto se il documento non ha elementi
+      const response = await fetch(`/api/documents/${document?.id}/items`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' // Necessario per inviare i cookie di autenticazione
       });
+      
+      if (!response.ok) {
+        throw new Error(`Errore nel recupero degli elementi: ${response.statusText}`);
+      }
+      
+      console.log('Risposta elementi:', response);
+      return response.json();
     }
   });
   

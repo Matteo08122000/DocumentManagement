@@ -351,8 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             revision: parsedName.revision,
             emissionDate: new Date(parsedName.date),
             filePath: file.path,
-            fileType,
-            status: documentStatus.VALID,
+            fileType: fileType as any,
+            status: documentStatus.VALID as any,
             expirationDate: null, // Will be set later if it's an Excel file
           });
           

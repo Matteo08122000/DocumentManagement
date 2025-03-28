@@ -63,9 +63,15 @@ export const documentItems = pgTable("document_items", {
   metadata: jsonb("metadata"),
 });
 
-export const insertDocumentItemSchema = createInsertSchema(documentItems).omit({
-  id: true,
-});
+export const insertDocumentItemSchema = createInsertSchema(documentItems)
+  .omit({
+    id: true,
+  })
+  .transform((data) => ({
+    ...data,
+    // Se expirationDate è una stringa, la convertiamo in un oggetto Date
+    expirationDate: data.expirationDate ? new Date(data.expirationDate) : null,
+  }));
 
 // EMAIL NOTIFICATION SCHEMA
 export const notifications = pgTable("notifications", {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Document, DocumentItem, insertDocumentItemSchema } from '@shared/schema';
+import { Document, DocumentItem } from '@shared/schema';
+import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,7 +42,13 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
   
   // Form setup for adding new items
   const form = useForm<any>({
-    resolver: zodResolver(insertDocumentItemSchema.omit({ documentId: true })),
+    resolver: zodResolver(z.object({
+      title: z.string().min(1, "Il titolo è obbligatorio"),
+      description: z.string().optional(),
+      expirationDate: z.date().nullable().optional(),
+      notificationDays: z.number().min(0).default(30),
+      status: z.string().default('valid')
+    })),
     defaultValues: {
       title: '',
       description: '',
@@ -87,10 +94,15 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
     mutationFn: async (data: any) => {
       if (!document) throw new Error('No document selected');
       
-      return apiRequest('POST', `/api/documents/${document.id}/items`, {
+      // Prepara i dati assicurandosi che la data sia in formato ISO string
+      const formattedData = {
         ...data,
-        documentId: document.id
-      });
+        documentId: document.id,
+        // Converti la data di scadenza in formato stringa ISO se presente
+        expirationDate: data.expirationDate ? new Date(data.expirationDate).toISOString() : null
+      };
+      
+      return apiRequest('POST', `/api/documents/${document.id}/items`, formattedData);
     },
     onSuccess: () => {
       toast({
@@ -286,7 +298,17 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
                             <Calendar
                               mode="single"
                               selected={field.value ? new Date(field.value) : undefined}
-                              onSelect={(date) => field.onChange(date?.toISOString())}
+                              onSelect={(date) => {
+                                if (date) {
+                                  // Per evitare problemi di timezone, impostiamo solo la data senza l'ora
+                                  const formattedDate = new Date(date);
+                                  // Converti a UTC per evitare problemi di timezone
+                                  formattedDate.setUTCHours(12, 0, 0, 0);
+                                  field.onChange(formattedDate);
+                                } else {
+                                  field.onChange(null);
+                                }
+                              }}
                               initialFocus
                             />
                           </PopoverContent>

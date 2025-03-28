@@ -298,23 +298,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/documents/:id/items', isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
+      console.log(`Creazione elemento per documento ID: ${documentId}`);
+      console.log('Dati ricevuti:', req.body);
       
       // Check if document exists
       const document = await storage.getDocumentById(documentId);
       if (!document) {
+        console.error(`Documento con ID ${documentId} non trovato`);
         return res.status(404).json({ message: 'Documento non trovato' });
       }
       
-      const itemData = insertDocumentItemSchema.parse({
+      // Facciamo alcune operazioni di pulizia sui dati
+      let processedData = {
         ...req.body,
         documentId
-      });
+      };
       
+      // Controlliamo la data di scadenza ed eseguiamo la conversione se necessario
+      if (processedData.expirationDate) {
+        try {
+          const expirationDate = new Date(processedData.expirationDate);
+          processedData.expirationDate = expirationDate;
+        } catch (e) {
+          console.error('Errore durante la conversione della data:', e);
+          return res.status(400).json({ message: 'Formato data non valido' });
+        }
+      }
+      
+      // Assicuriamoci che notificationDays sia un numero
+      if (processedData.notificationDays) {
+        processedData.notificationDays = parseInt(processedData.notificationDays);
+      }
+      
+      // Assicuriamoci che lo status sia impostato
+      if (!processedData.status) {
+        processedData.status = 'valid';
+      }
+      
+      console.log('Dati processati:', processedData);
+      
+      // Validiamo i dati con lo schema Zod
+      const itemData = insertDocumentItemSchema.parse(processedData);
+      console.log('Dati validati:', itemData);
+      
+      // Creiamo il nuovo elemento
       const item = await storage.createDocumentItem(itemData);
+      console.log('Elemento creato:', item);
+      
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ message: fromZodError(error).message });
+        console.error('Errore di validazione Zod:', fromZodError(error).message);
+        return res.status(400).json({ 
+          message: fromZodError(error).message,
+          details: error.errors
+        });
       }
       
       console.error('Error creating document item:', error);

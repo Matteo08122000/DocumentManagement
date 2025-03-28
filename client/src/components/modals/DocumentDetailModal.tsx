@@ -35,9 +35,20 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data: items = [], isLoading: isLoadingItems } = useQuery<DocumentItem[]>({
+  const { data: items = [], isLoading: isLoadingItems, error: itemsError } = useQuery<DocumentItem[]>({
     queryKey: ['/api/documents', document?.id, 'items'],
-    enabled: !!document?.id && isOpen
+    enabled: !!document?.id && isOpen,
+    onSuccess: (data) => {
+      console.log('Elementi caricati con successo:', data);
+    },
+    onError: (error) => {
+      console.error('Errore caricamento elementi:', error);
+      toast({
+        title: 'Errore',
+        description: `Impossibile caricare gli elementi controllati: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`,
+        variant: 'destructive'
+      });
+    }
   });
   
   // Form setup for adding new items
@@ -94,15 +105,23 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
     mutationFn: async (data: any) => {
       if (!document) throw new Error('No document selected');
       
+      console.log('Dati del form:', data);
+      
       // Prepara i dati assicurandosi che la data sia in formato ISO string
       const formattedData = {
         ...data,
         documentId: document.id,
         // Converti la data di scadenza in formato stringa ISO se presente
-        expirationDate: data.expirationDate ? new Date(data.expirationDate).toISOString() : null
+        expirationDate: data.expirationDate ? new Date(data.expirationDate).toISOString() : null,
+        // Inizializza lo status come 'valid'
+        status: 'valid'
       };
       
-      return apiRequest('POST', `/api/documents/${document.id}/items`, formattedData);
+      console.log('Dati formattati:', formattedData);
+      
+      const result = await apiRequest('POST', `/api/documents/${document.id}/items`, formattedData);
+      console.log('Risultato aggiunta elemento:', result);
+      return result;
     },
     onSuccess: () => {
       toast({

@@ -97,8 +97,24 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
         title: 'Elemento aggiunto',
         description: 'Elemento del documento aggiunto con successo',
       });
+      // Invalida query sugli elementi del documento corrente
       queryClient.invalidateQueries({ queryKey: ['/api/documents', document?.id, 'items'] });
+      
+      // Invalida altre query per aggiornare lo stato di tutti i documenti
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/statistics'] });
+      
+      // Aggiorna il documento corrente
+      if (document?.parentId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/documents/${document.parentId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/documents/${document.parentId}/children`] });
+      }
+      
+      // Reset del form
       form.reset();
+      
+      // Automaticamente passa alla visualizzazione della tabella
+      setActiveTab('items');
     },
     onError: (error) => {
       toast({
@@ -161,10 +177,11 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
                   <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Elemento</th>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Evento</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Descrizione</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Data Scadenza</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stato</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Preavviso</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">preavviso gg</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">stato</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Azioni</th>
                       </tr>
                     </thead>
@@ -172,14 +189,17 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
                       {items.map((item) => (
                         <tr key={item.id}>
                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{item.title}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
+                            {item.description || '-'}
+                          </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {item.expirationDate ? formatDate(item.expirationDate) : '-'}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <StatusEmoji status={item.status} />
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                            {item.notificationDays}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {item.notificationDays} giorni
+                            <StatusEmoji status={item.status} />
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             <button 
@@ -204,12 +224,12 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <Label htmlFor="title">Titolo</Label>
+                    <Label htmlFor="title">Evento</Label>
                     <Input
                       id="title"
                       {...form.register('title')}
                       className="mt-1"
-                      placeholder="Titolo dell'elemento"
+                      placeholder="Codice evento (es. NC-001)"
                     />
                     {form.formState.errors.title && (
                       <p className="text-red-500 text-xs mt-1">{form.formState.errors.title.message?.toString()}</p>
@@ -217,7 +237,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
                   </div>
                   
                   <div>
-                    <Label htmlFor="notificationDays">Giorni di Preavviso</Label>
+                    <Label htmlFor="notificationDays">preavviso gg</Label>
                     <Input
                       id="notificationDays"
                       type="number"

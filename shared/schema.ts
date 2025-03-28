@@ -87,7 +87,13 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type Document = typeof documents.$inferSelect;
+// Type base dal database
+export type Document = typeof documents.$inferSelect & {
+  // Proprietà calcolata - status peggiore tra gli elementi controllati
+  worstStatus?: typeof documentStatus[keyof typeof documentStatus];
+  // Elementi collegati al documento
+  children?: Document[];
+};
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
 export type DocumentItem = typeof documentItems.$inferSelect;

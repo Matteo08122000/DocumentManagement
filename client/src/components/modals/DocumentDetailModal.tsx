@@ -30,7 +30,7 @@ interface DocumentDetailModalProps {
 const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isOpen, onClose }) => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DocumentItem | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('items');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -65,7 +65,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
             </div>
             <p className="text-sm text-gray-600">{item.description}</p>
             <div className="mt-2 text-sm">
-              <div>Scadenza: {formatDate(item.expirationDate)}</div>
+              <div>Scadenza: {item.expirationDate ? formatDate(item.expirationDate) : '-'}</div>
               <div>Preavviso: {item.notificationDays} giorni</div>
             </div>
           </div>
@@ -78,7 +78,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
   useEffect(() => {
     if (!isOpen) {
       form.reset();
-      setActiveTab('overview');
+      setActiveTab('items');
     }
   }, [isOpen, form]);
   
@@ -137,34 +137,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document, isO
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
             <TabsList className="mb-4">
-              <TabsTrigger value="overview">Panoramica</TabsTrigger>
               <TabsTrigger value="items">Elementi Controllati</TabsTrigger>
               <TabsTrigger value="add-item">Aggiungi Elemento</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="overview">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-md font-medium text-gray-900">Dettagli Documento</h4>
-                  <span className="text-sm text-gray-500">Data Emissione: {formatDate(document.emissionDate)}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <FileIcon fileType={document.fileType} />
-                  <span className="text-sm text-gray-900">
-                    {document.fileType.charAt(0).toUpperCase() + document.fileType.slice(1)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Questo documento contiene le informazioni relative al punto norma {document.pointNumber}.
-                  {document.expirationDate && (
-                    <>
-                      <br />
-                      <strong>Data Scadenza:</strong> {formatDate(document.expirationDate)}
-                    </>
-                  )}
-                </p>
-              </div>
-            </TabsContent>
             
             <TabsContent value="items">
               {isLoadingItems ? (

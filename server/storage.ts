@@ -202,7 +202,42 @@ export class MemStorage implements IStorage {
     const item: DocumentItem = { ...insertItem, id };
     
     this.documentItems.set(id, item);
+    
+    // Aggiorna lo stato del documento padre in base agli elementi
+    await this.updateParentDocumentStatus(item.documentId);
+    
     return item;
+  }
+  
+  // Funzione per aggiornare lo stato del documento padre in base agli elementi
+  private async updateParentDocumentStatus(documentId: number): Promise<void> {
+    const document = this.documents.get(documentId);
+    if (!document) return;
+    
+    // Ottieni tutti gli elementi del documento
+    const items = Array.from(this.documentItems.values()).filter(
+      item => item.documentId === documentId
+    );
+    
+    if (items.length === 0) return;
+    
+    // Trova lo stato peggiore (expired > expiring > valid)
+    let worstStatus = documentStatus.VALID;
+    
+    for (const item of items) {
+      if (item.status === documentStatus.EXPIRED) {
+        worstStatus = documentStatus.EXPIRED;
+        break;
+      } else if (item.status === documentStatus.EXPIRING && worstStatus !== documentStatus.EXPIRED) {
+        worstStatus = documentStatus.EXPIRING;
+      }
+    }
+    
+    // Aggiorna il documento se necessario
+    if (document.status !== worstStatus) {
+      const updated = { ...document, status: worstStatus };
+      this.documents.set(documentId, updated);
+    }
   }
   
   async updateDocumentItem(id: number, itemUpdate: Partial<InsertDocumentItem>): Promise<DocumentItem | undefined> {
@@ -211,11 +246,26 @@ export class MemStorage implements IStorage {
     
     const updated = { ...item, ...itemUpdate };
     this.documentItems.set(id, updated);
+    
+    // Aggiorna lo stato del documento padre
+    await this.updateParentDocumentStatus(updated.documentId);
+    
     return updated;
   }
   
   async deleteDocumentItem(id: number): Promise<boolean> {
-    return this.documentItems.delete(id);
+    const item = this.documentItems.get(id);
+    if (!item) return false;
+    
+    const documentId = item.documentId;
+    const result = this.documentItems.delete(id);
+    
+    // Aggiorna lo stato del documento padre dopo aver eliminato l'elemento
+    if (result) {
+      await this.updateParentDocumentStatus(documentId);
+    }
+    
+    return result;
   }
   
   // Notification methods

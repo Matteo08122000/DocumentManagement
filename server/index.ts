@@ -1,26 +1,29 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./vite"; // se vuoi mantenere il logger
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Configurazione della sessione con opzioni migliorate
-app.use(session({
-  secret: "docgenius-secret-key",
-  resave: false,
-  saveUninitialized: false,
-  name: "docgenius.sid", // Nome personalizzato del cookie
-  cookie: { 
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 giorni (aumentato da 24 ore)
-    httpOnly: true,
-    sameSite: 'lax'
-  }
-}));
+// Configurazione della sessione
+app.use(
+  session({
+    secret: "docgenius-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    name: "docgenius.sid",
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      httpOnly: true,
+      sameSite: "lax",
+    },
+  })
+);
 
+// Middleware per logging (come già hai)
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -39,47 +42,41 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
+// Registra le tue API
 (async () => {
   const server = await registerRoutes(app);
 
+  // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  // **Rimuovi l'integrazione Vite qui!**
+  // Se vuoi servire file statici (produzione), puoi lasciare serveStatic(app)
+  // Ma per lo sviluppo con server separati non serve integrare Vite in Express.
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Avvia il backend su porta 5000
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`Backend API listening on port ${port}`);
+    }
+  );
 })();

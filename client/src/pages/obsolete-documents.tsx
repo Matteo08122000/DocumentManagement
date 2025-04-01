@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateFromString } from "@/lib/document-parser";
-import { getFileIcon } from "@/lib/file-utils";
+import { getFileIcon, inferFileType } from "@/lib/file-utils";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 

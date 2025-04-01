@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document, DocumentItem } from "../../../../shared/schema";
-import { inferFileType } from "@/lib/file-utils";
+import { inferFileType, getFileIcon } from "@/lib/file-utils";
 import { z } from "zod";
 import {
   Dialog,
@@ -378,10 +378,12 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                                 href={item.file_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 underline hover:text-blue-800 flex items-center"
+                                title={item.file_url.split("/").pop()}
+                                className="flex items-center justify-center"
                               >
-                                <FileIcon className="inline w-4 h-4 mr-1" />
-                                Visualizza File
+                                <FileIcon
+                                  fileType={inferFileType(item.file_url)}
+                                />
                               </a>
                             ) : (
                               "-"

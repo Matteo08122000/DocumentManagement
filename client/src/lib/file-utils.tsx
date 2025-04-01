@@ -1,19 +1,15 @@
-import { FileText, FileWord, FilePdf } from "lucide-react";
-import React from "react";
+import { FileText, FileSpreadsheet, FileType2 } from "lucide-react";
 
-/**
- * Get appropriate icon for a file type
- */
 export function getFileIcon(fileType: string): React.ReactNode {
   switch (fileType.toLowerCase()) {
     case "excel":
-      return <FileText className="text-green-500 mr-1 h-4 w-4" />;
+      return <FileSpreadsheet className="text-green-500 mr-1 h-4 w-4" />;
     case "word":
-      return <FileWord className="text-blue-500 mr-1 h-4 w-4" />;
+      return <FileText className="text-blue-500 mr-1 h-4 w-4" />;
     case "pdf":
-      return <FilePdf className="text-red-500 mr-1 h-4 w-4" />;
+      return <FileText className="text-red-500 mr-1 h-4 w-4" />;
     default:
-      return <FileText className="text-gray-500 mr-1 h-4 w-4" />;
+      return <FileType2 className="text-gray-500 mr-1 h-4 w-4" />;
   }
 }
 

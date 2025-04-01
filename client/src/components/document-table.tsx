@@ -3,7 +3,7 @@ import { Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getFileIcon } from "@/lib/file-utils";
+import { getFileIcon, inferFileType } from "@/lib/file-utils";
 import { formatDateFromString } from "@/lib/document-parser";
 
 interface DocumentTableProps {

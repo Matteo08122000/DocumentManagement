@@ -5,7 +5,7 @@ import MainLayout from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DocumentWithExpirations, Document, Expiration } from "@shared/schema";
-import { getFileIcon } from "@/lib/file-utils";
+import { getFileIcon, inferFileType } from "@/lib/file-utils";
 import { ArrowLeft, Download, Clock, CheckCircle, AlertTriangle, XCircle, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateFromString } from "@/lib/document-parser";

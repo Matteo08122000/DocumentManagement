@@ -1,339 +1,312 @@
-import { 
-  users, type User, type InsertUser,
-  documents, type Document, type InsertDocument,
-  documentItems, type DocumentItem, type InsertDocumentItem,
-  notifications, type Notification, type InsertNotification,
-  documentStatus
-} from "@shared/schema";
-import path from "path";
-import fs from "fs";
+// storage.ts
+import mysql from "mysql";
+import dotenv from "dotenv";
+dotenv.config();
 
-// Storage interface
-export interface IStorage {
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUsers(): Map<number, User>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUserEmail(id: number, email: string): Promise<User | undefined>;
-  updateUserNotificationDays(id: number, days: number): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
-  
-  // Document methods
-  getDocuments(includeObsolete?: boolean): Promise<Document[]>;
-  getDocumentById(id: number): Promise<Document | undefined>;
-  getChildDocuments(parentId: number): Promise<Document[]>;
-  createDocument(document: InsertDocument): Promise<Document>;
-  updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined>;
-  markDocumentObsolete(id: number): Promise<Document | undefined>;
-  deleteDocument(id: number): Promise<boolean>;
-  
-  // Document items methods
-  getDocumentItems(documentId: number): Promise<DocumentItem[]>;
-  getDocumentItemById(id: number): Promise<DocumentItem | undefined>;
-  createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem>;
-  updateDocumentItem(id: number, item: Partial<InsertDocumentItem>): Promise<DocumentItem | undefined>;
-  deleteDocumentItem(id: number): Promise<boolean>;
-  
-  // Notification methods
-  getNotifications(): Promise<Notification[]>;
-  getNotificationsByEmail(email: string): Promise<Notification[]>;
-  getNotificationsByDocument(documentId: number): Promise<Notification[]>;
-  getNotificationsByDocumentItem(itemId: number): Promise<Notification[]>;
-  createNotification(notification: InsertNotification): Promise<Notification>;
-  updateNotification(id: number, notification: Partial<InsertNotification>): Promise<Notification | undefined>;
-  deleteNotification(id: number): Promise<boolean>;
-  
-  // File operations
-  moveToObsolete(filePath: string): Promise<string | null>;
-}
+export type User = {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  created_at?: Date;
+  active?: boolean;
+};
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private documents: Map<number, Document>;
-  private documentItems: Map<number, DocumentItem>;
-  private notifications: Map<number, Notification>;
-  
-  private userId: number;
-  private documentId: number;
-  private documentItemId: number;
-  private notificationId: number;
-  
-  // File system paths
-  private basePath: string;
-  private obsoletePath: string;
-  
-  constructor() {
-    this.users = new Map();
-    this.documents = new Map();
-    this.documentItems = new Map();
-    this.notifications = new Map();
-    
-    this.userId = 1;
-    this.documentId = 1;
-    this.documentItemId = 1;
-    this.notificationId = 1;
-    
-    // Setup file paths
-    this.basePath = path.resolve(process.cwd(), 'uploads');
-    this.obsoletePath = path.resolve(process.cwd(), 'uploads/obsoleti');
-    
-    // Create directories if they don't exist
-    this.ensureDirectories();
-  }
-  
-  private ensureDirectories() {
-    if (!fs.existsSync(this.basePath)) {
-      fs.mkdirSync(this.basePath, { recursive: true });
-    }
-    
-    if (!fs.existsSync(this.obsoletePath)) {
-      fs.mkdirSync(this.obsoletePath, { recursive: true });
-    }
-  }
-  
-  // User methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-  
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-  
-  getUsers(): Map<number, User> {
-    return this.users;
-  }
-  
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-  
-  async updateUserEmail(id: number, email: string): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updated = { ...user, email };
-    this.users.set(id, updated);
-    return updated;
-  }
-  
-  async updateUserNotificationDays(id: number, days: number): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updated = { ...user, notificationDays: days };
-    this.users.set(id, updated);
-    return updated;
-  }
-  
-  async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
-  }
-  
-  // Document methods
-  async getDocuments(includeObsolete: boolean = false): Promise<Document[]> {
-    const docs = Array.from(this.documents.values());
-    return includeObsolete ? docs : docs.filter(doc => !doc.isObsolete);
-  }
-  
-  async getDocumentById(id: number): Promise<Document | undefined> {
-    return this.documents.get(id);
-  }
-  
-  async getChildDocuments(parentId: number): Promise<Document[]> {
-    return Array.from(this.documents.values()).filter(
-      doc => doc.parentId === parentId && !doc.isObsolete
-    );
-  }
-  
-  async createDocument(insertDocument: InsertDocument): Promise<Document> {
-    const id = this.documentId++;
-    const document: Document = { 
-      ...insertDocument, 
-      id, 
-      createdAt: new Date() 
-    };
-    
-    this.documents.set(id, document);
-    return document;
-  }
-  
-  async updateDocument(id: number, documentUpdate: Partial<InsertDocument>): Promise<Document | undefined> {
-    const document = this.documents.get(id);
-    if (!document) return undefined;
-    
-    const updated = { ...document, ...documentUpdate };
-    this.documents.set(id, updated);
-    return updated;
-  }
-  
-  async markDocumentObsolete(id: number): Promise<Document | undefined> {
-    const document = this.documents.get(id);
-    if (!document) return undefined;
-    
-    const updated = { ...document, isObsolete: true };
-    this.documents.set(id, updated);
-    return updated;
-  }
-  
-  async deleteDocument(id: number): Promise<boolean> {
-    return this.documents.delete(id);
-  }
-  
-  // Document items methods
+export type Document = {
+  id: number;
+  pointNumber: string;
+  title: string;
+  revision: string;
+  emissionDate: Date;
+  filePath: string;
+  fileType: string;
+  status: string;
+  expirationDate?: Date | null;
+  isObsolete?: boolean;
+  parentId?: number | null;
+  userId: number;
+};
+
+export type DocumentItem = {
+  id: number;
+  documentId: number;
+  title: string;
+  description?: string;
+  expirationDate?: Date | null;
+  notificationDays?: number;
+  status: string;
+  file_url?: string | null;
+};
+
+const pool = mysql.createPool({
+  connectionLimit: 10,
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USERNAME || "root",
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE || "docgenius",
+});
+
+export const storage = {
+  // === USER FUNCTIONS ===
+  async getUserByEmail(email: string): Promise<User | null> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "SELECT * FROM users WHERE email = ? LIMIT 1",
+        [email],
+        (error, results) => {
+          if (error) return reject(error);
+          resolve(results.length > 0 ? (results[0] as User) : null);
+        }
+      );
+    });
+  },
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "SELECT * FROM users WHERE username = ? LIMIT 1",
+        [username],
+        (error, results) => {
+          if (error) return reject(error);
+          resolve(results.length > 0 ? (results[0] as User) : null);
+        }
+      );
+    });
+  },
+
+  async createUser(data: {
+    username: string;
+    email: string;
+    password: string;
+  }): Promise<User> {
+    return new Promise((resolve, reject) => {
+      const query =
+        "INSERT INTO users (username, email, password, created_at, active) VALUES (?, ?, ?, NOW(), true)";
+      pool.query(
+        query,
+        [data.username, data.email, data.password],
+        (error, results) => {
+          if (error) return reject(error);
+          const newUser: User = {
+            id: (results as any).insertId,
+            username: data.username,
+            email: data.email,
+            password: data.password,
+            created_at: new Date(),
+            active: true,
+          };
+          resolve(newUser);
+        }
+      );
+    });
+  },
+
+  async getUser(id: number): Promise<User | null> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "SELECT * FROM users WHERE id = ? LIMIT 1",
+        [id],
+        (error, results) => {
+          if (error) return reject(error);
+          resolve(results.length > 0 ? (results[0] as User) : null);
+        }
+      );
+    });
+  },
+
+  // === DOCUMENT FUNCTIONS ===
+  async getDocuments(
+    userId: number,
+    includeObsolete: boolean = false
+  ): Promise<Document[]> {
+    return new Promise((resolve, reject) => {
+      const query = includeObsolete
+        ? "SELECT * FROM documents WHERE userId = ?"
+        : "SELECT * FROM documents WHERE userId = ? AND (isObsolete IS NULL OR isObsolete = false)";
+
+      pool.query(query, [userId], (error, results) => {
+        if (error) return reject(error);
+        resolve(results as Document[]);
+      });
+    });
+  },
+
+  async getDocumentById(id: number): Promise<Document | null> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "SELECT * FROM documents WHERE id = ?",
+        [id],
+        (error, results) => {
+          if (error) return reject(error);
+          resolve(results.length > 0 ? (results[0] as Document) : null);
+        }
+      );
+    });
+  },
+
   async getDocumentItems(documentId: number): Promise<DocumentItem[]> {
-    return Array.from(this.documentItems.values()).filter(
-      item => item.documentId === documentId
-    );
-  }
-  
-  async getDocumentItemById(id: number): Promise<DocumentItem | undefined> {
-    return this.documentItems.get(id);
-  }
-  
-  async createDocumentItem(insertItem: InsertDocumentItem): Promise<DocumentItem> {
-    const id = this.documentItemId++;
-    const item: DocumentItem = { ...insertItem, id };
-    
-    this.documentItems.set(id, item);
-    
-    // Aggiorna lo stato del documento padre in base agli elementi
-    await this.updateParentDocumentStatus(item.documentId);
-    
-    return item;
-  }
-  
-  // Funzione per aggiornare lo stato del documento padre in base agli elementi
-  private async updateParentDocumentStatus(documentId: number): Promise<void> {
-    const document = this.documents.get(documentId);
-    if (!document) return;
-    
-    // Ottieni tutti gli elementi del documento
-    const items = Array.from(this.documentItems.values()).filter(
-      item => item.documentId === documentId
-    );
-    
-    if (items.length === 0) return;
-    
-    // Trova lo stato peggiore (expired > expiring > valid)
-    let worstStatus = documentStatus.VALID;
-    
-    for (const item of items) {
-      if (item.status === documentStatus.EXPIRED) {
-        worstStatus = documentStatus.EXPIRED;
-        break;
-      } else if (item.status === documentStatus.EXPIRING && worstStatus !== documentStatus.EXPIRED) {
-        worstStatus = documentStatus.EXPIRING;
-      }
-    }
-    
-    // Aggiorna il documento se necessario
-    if (document.status !== worstStatus) {
-      const updated = { ...document, status: worstStatus };
-      this.documents.set(documentId, updated);
-    }
-  }
-  
-  async updateDocumentItem(id: number, itemUpdate: Partial<InsertDocumentItem>): Promise<DocumentItem | undefined> {
-    const item = this.documentItems.get(id);
-    if (!item) return undefined;
-    
-    const updated = { ...item, ...itemUpdate };
-    this.documentItems.set(id, updated);
-    
-    // Aggiorna lo stato del documento padre
-    await this.updateParentDocumentStatus(updated.documentId);
-    
-    return updated;
-  }
-  
-  async deleteDocumentItem(id: number): Promise<boolean> {
-    const item = this.documentItems.get(id);
-    if (!item) return false;
-    
-    const documentId = item.documentId;
-    const result = this.documentItems.delete(id);
-    
-    // Aggiorna lo stato del documento padre dopo aver eliminato l'elemento
-    if (result) {
-      await this.updateParentDocumentStatus(documentId);
-    }
-    
-    return result;
-  }
-  
-  // Notification methods
-  async getNotifications(): Promise<Notification[]> {
-    return Array.from(this.notifications.values());
-  }
-  
-  async getNotificationsByEmail(email: string): Promise<Notification[]> {
-    return Array.from(this.notifications.values()).filter(
-      notification => notification.email === email
-    );
-  }
-  
-  async getNotificationsByDocument(documentId: number): Promise<Notification[]> {
-    return Array.from(this.notifications.values()).filter(
-      notification => notification.documentId === documentId
-    );
-  }
-  
-  async getNotificationsByDocumentItem(itemId: number): Promise<Notification[]> {
-    return Array.from(this.notifications.values()).filter(
-      notification => notification.documentItemId === itemId
-    );
-  }
-  
-  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
-    const id = this.notificationId++;
-    const notification: Notification = { 
-      ...insertNotification, 
-      id, 
-      createdAt: new Date() 
-    };
-    
-    this.notifications.set(id, notification);
-    return notification;
-  }
-  
-  async updateNotification(id: number, notificationUpdate: Partial<InsertNotification>): Promise<Notification | undefined> {
-    const notification = this.notifications.get(id);
-    if (!notification) return undefined;
-    
-    const updated = { ...notification, ...notificationUpdate };
-    this.notifications.set(id, updated);
-    return updated;
-  }
-  
-  async deleteNotification(id: number): Promise<boolean> {
-    return this.notifications.delete(id);
-  }
-  
-  // File operations
-  async moveToObsolete(filePath: string): Promise<string | null> {
-    try {
-      const fileName = path.basename(filePath);
-      const destPath = path.join(this.obsoletePath, fileName);
-      
-      // Make sure directories exist
-      this.ensureDirectories();
-      
-      // Copy file to obsolete directory
-      fs.copyFileSync(filePath, destPath);
-      
-      return destPath;
-    } catch (error) {
-      console.error('Error moving file to obsolete:', error);
-      return null;
-    }
-  }
-}
+    return new Promise((resolve, reject) => {
+      const query = "SELECT * FROM document_items WHERE documentId = ?";
+      pool.query(query, [documentId], (error, results) => {
+        if (error) return reject(error);
+        resolve(results as DocumentItem[]);
+      });
+    });
+  },
 
-export const storage = new MemStorage();
+  async getChildDocuments(parentId: number): Promise<Document[]> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "SELECT * FROM documents WHERE parentId = ?",
+        [parentId],
+        (error, results) => {
+          if (error) return reject(error);
+          resolve(results as Document[]);
+        }
+      );
+    });
+  },
+
+  async createDocument(data: Omit<Document, "id">): Promise<Document> {
+    return new Promise((resolve, reject) => {
+      const query =
+        "INSERT INTO documents (pointNumber, title, revision, emissionDate, filePath, fileType, status, expirationDate, isObsolete, parentId, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      pool.query(
+        query,
+        [
+          data.pointNumber,
+          data.title,
+          data.revision,
+          data.emissionDate,
+          data.filePath,
+          data.fileType,
+          data.status,
+          data.expirationDate || null,
+          data.isObsolete || false,
+          data.parentId || null,
+          data.userId,
+        ],
+        (error, results) => {
+          if (error) return reject(error);
+          const newDoc: Document = {
+            id: (results as any).insertId,
+            ...data,
+          };
+          resolve(newDoc);
+        }
+      );
+    });
+  },
+
+  async markDocumentObsolete(id: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "UPDATE documents SET isObsolete = true WHERE id = ?",
+        [id],
+        (error) => {
+          if (error) return reject(error);
+          resolve(true);
+        }
+      );
+    });
+  },
+
+  async updateDocument(
+    id: number,
+    updateData: Partial<Document>
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const fields = Object.keys(updateData)
+        .map((key) => `${key} = ?`)
+        .join(", ");
+      const values = Object.values(updateData);
+      const query = `UPDATE documents SET ${fields} WHERE id = ?`;
+      pool.query(query, [...values, id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
+
+  async getDocumentItemById(id: number): Promise<DocumentItem | null> {
+    return new Promise((resolve, reject) => {
+      const query = "SELECT * FROM document_items WHERE id = ?";
+      pool.query(query, [id], (error, results) => {
+        if (error) return reject(error);
+        resolve(results.length > 0 ? (results[0] as DocumentItem) : null);
+      });
+    });
+  },
+
+  async createDocumentItem(item: {
+    documentId: number;
+    title: string;
+    description?: string;
+    expirationDate?: Date | null;
+    notificationDays?: number;
+    status: string;
+  }): Promise<DocumentItem> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        INSERT INTO document_items (documentId, title, description, expirationDate, notificationDays, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+      const values = [
+        item.documentId,
+        item.title,
+        item.description || null,
+        item.expirationDate || null,
+        item.notificationDays || 0,
+        item.status,
+      ];
+      pool.query(query, values, (err, results) => {
+        if (err) return reject(err);
+        resolve({
+          id: (results as any).insertId,
+          ...item,
+        });
+      });
+    });
+  },
+
+  async saveDocumentItemFile(file: {
+    itemId: number;
+    filePath: string;
+    fileType: string;
+    originalName: string;
+  }): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        INSERT INTO document_item_files (itemId, filePath, fileType, originalName)
+        VALUES (?, ?, ?, ?)
+      `;
+      const values = [
+        file.itemId,
+        file.filePath,
+        file.fileType,
+        file.originalName,
+      ];
+      pool.query(query, values, (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
+
+  async updateDocumentItem(
+    id: number,
+    data: Partial<DocumentItem>
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const fields = Object.keys(data)
+        .map((key) => `${key} = ?`)
+        .join(", ");
+      const values = Object.values(data);
+      const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
+      pool.query(query, [...values, id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
+};

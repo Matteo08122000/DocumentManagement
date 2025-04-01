@@ -1,29 +1,58 @@
 import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { registerRoutes } from "./routes";
-import { log } from "./vite"; // se vuoi mantenere il logger
+import cors from "cors";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const MySQLStoreFactory = require("express-mysql-session");
+const MySQLStore = MySQLStoreFactory(session);
+
+import { registerRoutes } from "./routes/routes";
+import documentRoutes from "./routes/documentRoutes";
+import { log } from "./vite";
 
 const app = express();
+
+// ✅ CORS prima di tutto (per supportare cookie con credentials)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // dominio del frontend
+    credentials: true,
+  })
+);
+
+// ✅ Middleware di parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Configurazione della sessione
+// ✅ Configurazione dello store MySQL per le sessioni
+const dbOptions = {
+  host: process.env.DB_HOST || "127.0.0.1",
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USERNAME || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_DATABASE || "docgenius",
+};
+
+const sessionStore = new MySQLStore(dbOptions);
+
+// ✅ Middleware di sessione (dopo cors e parser)
 app.use(
   session({
     secret: "docgenius-secret-key",
     resave: false,
     saveUninitialized: false,
+    store: sessionStore,
     name: "docgenius.sid",
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      secure: process.env.NODE_ENV === "production", // true solo in produzione
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 giorni
       httpOnly: true,
       sameSite: "lax",
     },
   })
 );
 
-// Middleware per logging (come già hai)
+// ✅ Middleware di log per tutte le route API
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -48,14 +77,17 @@ app.use((req, res, next) => {
       log(logLine);
     }
   });
+
   next();
 });
 
-// Registra le tue API
+// ✅ Mount delle route modularizzate (REST API)
+app.use("/api", documentRoutes);
+
+// ✅ Avvio server + error handling
 (async () => {
   const server = await registerRoutes(app);
 
-  // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -63,11 +95,14 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // **Rimuovi l'integrazione Vite qui!**
-  // Se vuoi servire file statici (produzione), puoi lasciare serveStatic(app)
-  // Ma per lo sviluppo con server separati non serve integrare Vite in Express.
+  app._router.stack
+    .filter((r) => r.route)
+    .forEach((r) => {
+      const path = r.route.path;
+      const method = Object.keys(r.route.methods)[0].toUpperCase();
+      console.log(`[ROUTE] ${method} ${path}`);
+    });
 
-  // Avvia il backend su porta 5000
   const port = 5000;
   server.listen(
     {

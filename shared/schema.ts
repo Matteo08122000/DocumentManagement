@@ -1,14 +1,22 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import {
+  mysqlTable,
+  varchar,
+  serial,
+  int,
+  boolean,
+  datetime,
+  json,
+} from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // USER SCHEMA
-export const users = pgTable("users", {
+export const users = mysqlTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email"),
-  notificationDays: integer("notification_days").default(30),
+  username: varchar("username", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  notificationDays: int("notification_days").default(30),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -31,19 +39,19 @@ export const documentTypes = {
   PDF: "pdf",
 } as const;
 
-export const documents = pgTable("documents", {
+export const documents = mysqlTable("documents", {
   id: serial("id").primaryKey(),
-  pointNumber: text("point_number").notNull(),
-  title: text("title").notNull(),
-  revision: text("revision").notNull(),
-  emissionDate: timestamp("emission_date").notNull(),
-  filePath: text("file_path").notNull(),
-  fileType: text("file_type").notNull(),
-  expirationDate: timestamp("expiration_date"),
-  status: text("status").notNull().default(documentStatus.VALID),
-  parentId: integer("parent_id").references(() => documents.id),
+  pointNumber: varchar("point_number", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  revision: varchar("revision", { length: 255 }).notNull(),
+  emissionDate: datetime("emission_date").notNull(),
+  filePath: varchar("file_path", { length: 1024 }).notNull(),
+  fileType: varchar("file_type", { length: 50 }).notNull(),
+  expirationDate: datetime("expiration_date"),
+  status: varchar("status", { length: 50 }).notNull().default("valid"),
+  parentId: int("parent_id"),
   isObsolete: boolean("is_obsolete").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: datetime("created_at").default(new Date()),
 });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
@@ -52,15 +60,17 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
 });
 
 // CHILD DOCUMENT ITEMS (used for Excel files with expiration dates)
-export const documentItems = pgTable("document_items", {
+// Aggiungi la colonna per il file associato agli elementi
+export const documentItems = mysqlTable("document_items", {
   id: serial("id").primaryKey(),
-  documentId: integer("document_id").notNull().references(() => documents.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  expirationDate: timestamp("expiration_date"),
-  notificationDays: integer("notification_days").default(30),
-  status: text("status").notNull().default(documentStatus.VALID),
-  metadata: jsonb("metadata"),
+  documentId: int("document_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: varchar("description", { length: 1000 }),
+  expirationDate: datetime("expiration_date"),
+  notificationDays: int("notification_days").default(30),
+  status: varchar("status", { length: 50 }).default("valid").notNull(),
+  metadata: json("metadata"),
+  fileUrl: varchar("file_url", { length: 1024 }), // Ecco come rendere il campo "nullable"
 });
 
 export const insertDocumentItemSchema = createInsertSchema(documentItems)
@@ -74,14 +84,14 @@ export const insertDocumentItemSchema = createInsertSchema(documentItems)
   }));
 
 // EMAIL NOTIFICATION SCHEMA
-export const notifications = pgTable("notifications", {
+export const notifications = mysqlTable("notifications", {
   id: serial("id").primaryKey(),
-  email: text("email").notNull(),
-  documentId: integer("document_id").references(() => documents.id),
-  documentItemId: integer("document_item_id").references(() => documentItems.id),
-  notificationDays: integer("notification_days").notNull().default(30),
+  email: varchar("email", { length: 255 }).notNull(),
+  documentId: int("document_id"),
+  documentItemId: int("document_item_id"),
+  notificationDays: int("notification_days").notNull().default(30),
   active: boolean("active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: datetime("created_at").default(new Date()),
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
@@ -95,9 +105,8 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 // Type base dal database
 export type Document = typeof documents.$inferSelect & {
-  // Proprietà calcolata - status peggiore tra gli elementi controllati
-  worstStatus?: typeof documentStatus[keyof typeof documentStatus];
-  // Elementi collegati al documento
+  file_url?: string;
+  worstStatus?: (typeof documentStatus)[keyof typeof documentStatus];
   children?: Document[];
 };
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;

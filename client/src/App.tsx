@@ -18,16 +18,16 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-  
+
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     await logout();
   };
-  
+
   // Layout completamente responsive
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -38,39 +38,49 @@ function AppLayout() {
             {/* Desktop navbar con logo e menu a sinistra */}
             <div className="flex items-center space-x-1">
               <Link href="/">
-                <span className="text-xl font-bold cursor-pointer mr-4">DocGenius</span>
+                <span className="text-xl font-bold cursor-pointer mr-4">
+                  DocGenius
+                </span>
               </Link>
-              
+
               {/* Desktop menu - spostato a sinistra accanto al logo */}
               <div className="hidden sm:flex items-center">
                 <Link href="/">
-                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Dashboard</span>
+                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                    Dashboard
+                  </span>
                 </Link>
                 {isAuthenticated && (
                   <Link href="/obsoleti">
-                    <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Documenti Obsoleti</span>
+                    <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                      Documenti Obsoleti
+                    </span>
                   </Link>
                 )}
                 <Link href="/chi-siamo">
-                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Chi Siamo</span>
+                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                    Chi Siamo
+                  </span>
                 </Link>
                 <Link href="/assistenza">
-                  <span className="text-white hover:bg-blue-700 px-3 py-2 rounded text-sm cursor-pointer block">Assistenza</span>
+                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                    Assistenza
+                  </span>
                 </Link>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               {/* Bottone menu mobile */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="sm:hidden text-white"
                 onClick={toggleSidebar}
               >
                 <Menu className="h-6 w-6" />
               </Button>
-              
+
               {/* User menu a destra */}
               {isAuthenticated ? (
                 <div className="hidden sm:flex items-center space-x-3">
@@ -78,9 +88,9 @@ function AppLayout() {
                     <User className="h-4 w-4 inline mr-1" />
                     {user?.username}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="text-white hover:bg-blue-700"
                     onClick={handleLogout}
                   >
@@ -93,48 +103,65 @@ function AppLayout() {
           </div>
         </div>
       </header>
-      
+
       {/* Mobile sidebar */}
       {isSidebarOpen && (
         <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setIsSidebarOpen(false)}></div>
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
           <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg p-4 flex flex-col">
             <div className="flex justify-between items-center mb-5 pb-3 border-b">
               <Link href="/">
-                <span className="font-bold text-xl text-blue-800 cursor-pointer">DocGenius</span>
+                <span className="font-bold text-xl text-blue-800 cursor-pointer">
+                  DocGenius
+                </span>
               </Link>
-              <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSidebarOpen(false)}
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            
+
             <nav className="flex-1 flex flex-col space-y-1">
               <Link href="/">
-                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Dashboard</span>
+                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">
+                  Dashboard
+                </span>
               </Link>
               {isAuthenticated && (
                 <Link href="/obsoleti">
-                  <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Documenti Obsoleti</span>
+                  <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">
+                    Documenti Obsoleti
+                  </span>
                 </Link>
               )}
               <Link href="/chi-siamo">
-                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Chi Siamo</span>
+                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">
+                  Chi Siamo
+                </span>
               </Link>
               <Link href="/assistenza">
-                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">Assistenza</span>
+                <span className="px-3 py-3 text-gray-700 hover:bg-gray-100 rounded-md block cursor-pointer">
+                  Assistenza
+                </span>
               </Link>
-              
+
               <div className="border-t my-3"></div>
-              
+
               {isAuthenticated ? (
                 <>
                   <div className="px-3 py-2 text-gray-700">
                     <User className="h-4 w-4 inline mr-1" />
                     {user?.username}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="flex items-center justify-start px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                     onClick={handleLogout}
                   >
@@ -147,7 +174,7 @@ function AppLayout() {
           </div>
         </div>
       )}
-      
+
       {/* Main content */}
       <main className="flex-1 py-6 px-4">
         <div className="container mx-auto">
@@ -163,7 +190,7 @@ function AppLayout() {
           </Switch>
         </div>
       </main>
-      
+
       <Footer />
       <Toaster />
     </div>

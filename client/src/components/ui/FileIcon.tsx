@@ -1,31 +1,26 @@
-import React from 'react';
+import React from "react";
 
 interface FileIconProps {
-  fileType: string;
+  fileType?: string | null; // Permetti anche undefined/null
 }
 
 const FileIcon: React.FC<FileIconProps> = ({ fileType }) => {
-  let iconName = '';
-  let colorClass = '';
-  
-  switch (fileType.toLowerCase()) {
-    case 'excel':
-      iconName = 'description';
-      colorClass = 'text-green-600';
-      break;
-    case 'word':
-      iconName = 'article';
-      colorClass = 'text-blue-600';
-      break;
-    case 'pdf':
-      iconName = 'picture_as_pdf';
-      colorClass = 'text-red-600';
-      break;
-    default:
-      iconName = 'insert_drive_file';
-      colorClass = 'text-gray-600';
+  let iconName = "insert_drive_file";
+  let colorClass = "text-gray-600";
+
+  const type = fileType?.toLowerCase() || "";
+
+  if (type.includes("excel") || type.includes("xlsx") || type.includes("xls")) {
+    iconName = "description";
+    colorClass = "text-green-600";
+  } else if (type.includes("word") || type.includes("doc")) {
+    iconName = "article";
+    colorClass = "text-blue-600";
+  } else if (type.includes("pdf")) {
+    iconName = "picture_as_pdf";
+    colorClass = "text-red-600";
   }
-  
+
   return (
     <span className={`material-icons-round ${colorClass} mr-1`}>
       {iconName}

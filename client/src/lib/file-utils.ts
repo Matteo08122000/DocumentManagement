@@ -6,37 +6,49 @@ import React from "react";
  */
 export function getFileIcon(fileType: string): React.ReactNode {
   switch (fileType.toLowerCase()) {
-    case 'excel':
+    case "excel":
       return <FileText className="text-green-500 mr-1 h-4 w-4" />;
-    case 'word':
+    case "word":
       return <FileWord className="text-blue-500 mr-1 h-4 w-4" />;
-    case 'pdf':
+    case "pdf":
       return <FilePdf className="text-red-500 mr-1 h-4 w-4" />;
     default:
       return <FileText className="text-gray-500 mr-1 h-4 w-4" />;
   }
 }
 
+export function inferFileType(file_url?: string | null): string {
+  if (!file_url) return "";
+  const ext = file_url.split(".").pop()?.toLowerCase() || "";
+  if (ext.includes("xls")) return "excel";
+  if (ext.includes("doc")) return "word";
+  if (ext.includes("pdf")) return "pdf";
+  return "unknown";
+}
+
 /**
  * Check if a file is about to expire based on warning days
  */
-export function isExpiring(expirationDate: string, warningDays: number): boolean {
+export function isExpiring(
+  expirationDate: string,
+  warningDays: number
+): boolean {
   if (!expirationDate || expirationDate.length !== 8) {
     return false;
   }
-  
+
   try {
     const year = parseInt(expirationDate.substring(0, 4));
     const month = parseInt(expirationDate.substring(4, 6)) - 1; // JS months are 0-indexed
     const day = parseInt(expirationDate.substring(6, 8));
-    
+
     const expDate = new Date(year, month, day);
     const today = new Date();
-    
+
     // Add warning days to today to get the warning threshold
     const warningThreshold = new Date();
     warningThreshold.setDate(today.getDate() + warningDays);
-    
+
     // If expiration date is before warning threshold but after today, it's expiring
     return expDate <= warningThreshold && expDate > today;
   } catch (error) {
@@ -51,15 +63,15 @@ export function isExpired(expirationDate: string): boolean {
   if (!expirationDate || expirationDate.length !== 8) {
     return false;
   }
-  
+
   try {
     const year = parseInt(expirationDate.substring(0, 4));
     const month = parseInt(expirationDate.substring(4, 6)) - 1; // JS months are 0-indexed
     const day = parseInt(expirationDate.substring(6, 8));
-    
+
     const expDate = new Date(year, month, day);
     const today = new Date();
-    
+
     return expDate < today;
   } catch (error) {
     return false;

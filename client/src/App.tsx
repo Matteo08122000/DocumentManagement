@@ -32,7 +32,7 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-md sticky top-0 z-30">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-900 text-white shadow-md sticky top-0 z-30">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Desktop navbar con logo e menu a sinistra */}
@@ -46,24 +46,24 @@ function AppLayout() {
               {/* Desktop menu - spostato a sinistra accanto al logo */}
               <div className="hidden sm:flex items-center">
                 <Link href="/">
-                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                  <span className="text-white hover:bg-blue-800  px-3 py-2 rounded text-sm cursor-pointer block">
                     Dashboard
                   </span>
                 </Link>
                 {isAuthenticated && (
                   <Link href="/obsoleti">
-                    <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                    <span className="text-white hover:bg-blue-800  px-3 py-2 rounded text-sm cursor-pointer block">
                       Documenti Obsoleti
                     </span>
                   </Link>
                 )}
                 <Link href="/chi-siamo">
-                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                  <span className="text-white hover:bg-blue-800  px-3 py-2 rounded text-sm cursor-pointer block">
                     Chi Siamo
                   </span>
                 </Link>
                 <Link href="/assistenza">
-                  <span className="text-blue-700 hover:bg-white px-3 py-2 rounded text-sm cursor-pointer block">
+                  <span className="text-white hover:bg-blue-800  px-3 py-2 rounded text-sm cursor-pointer block">
                     Assistenza
                   </span>
                 </Link>

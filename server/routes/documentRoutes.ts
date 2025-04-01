@@ -191,16 +191,16 @@ router.post(
         originalName: file.originalname,
       });
 
-      const fileUrl = `/uploads/${file.filename}`;
+      const file_url = `/uploads/${file.filename}`;
 
       await db
         .update(documentItems)
-        .set({ fileUrl })
+        .set({ file_url })
         .where(eq(documentItems.id, itemId));
 
       res.status(201).json({
         message: "File allegato con successo",
-        fileUrl,
+        file_url,
       });
     } catch (error) {
       console.error("Errore durante l'upload file item:", error);

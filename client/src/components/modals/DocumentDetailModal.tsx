@@ -98,6 +98,60 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     },
   });
 
+  const handleEditSubmit = form.handleSubmit(async (data) => {
+    if (!selectedItem?.id) return;
+
+    await editItemMutation.mutateAsync(data);
+  });
+
+  const editItemMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedItem?.id) throw new Error("Nessun elemento selezionato");
+
+      const formattedData = {
+        ...data,
+        expirationDate: data.expirationDate
+          ? new Date(data.expirationDate).toISOString()
+          : null,
+      };
+
+      const response = await fetch(`/api/documents/items/${selectedItem.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(formattedData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Errore durante la modifica dell'elemento");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Elemento aggiornato",
+        description: "Modifica completata con successo",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/documents", document?.id, "items"],
+      });
+      setSelectedItem(null);
+      setActiveTab("items");
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: `Errore durante la modifica: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Display items with status
   const renderItems = () => {
     if (isLoadingItems) return <div>Caricamento elementi...</div>;
@@ -261,6 +315,40 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
   if (!document) return null;
 
+  const handleDeleteItem = async (id: number) => {
+    const confirmed = window.confirm(
+      "Sei sicuro di voler eliminare questo elemento?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/documents/items/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Errore nella cancellazione");
+      }
+
+      toast({
+        title: "Elemento eliminato",
+        description: "Elemento rimosso con successo",
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["/api/documents", document?.id, "items"],
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description:
+          error instanceof Error ? error.message : "Errore sconosciuto",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -291,6 +379,19 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
               <TabsTrigger value="items">Elementi Controllati</TabsTrigger>
               <TabsTrigger value="add-item">Aggiungi Elemento</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="edit-item">
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                {/* Stesso contenuto del form di aggiunta, ma con un bottone diverso */}
+                {/* Riusa tutti i field come in add-item, con i valori già precompilati */}
+                {/* Alla fine, il bottone sarà: */}
+                <Button type="submit" disabled={editItemMutation.isPending}>
+                  {editItemMutation.isPending
+                    ? "Modifica in corso..."
+                    : "Salva Modifiche"}
+                </Button>
+              </form>
+            </TabsContent>
 
             <TabsContent value="items">
               {isLoadingItems ? (
@@ -361,7 +462,40 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             <StatusEmoji status={item.status} />
                           </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 space-x-2">
+                            <button
+                              className="ml-2 text-blue-600 hover:text-blue-900"
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setActiveTab("edit-item");
+                                form.setValue("title", item.title);
+                                form.setValue(
+                                  "description",
+                                  item.description || ""
+                                );
+                                form.setValue(
+                                  "notificationDays",
+                                  item.notificationDays || 0
+                                );
+                                form.setValue(
+                                  "expirationDate",
+                                  item.expirationDate
+                                    ? new Date(item.expirationDate)
+                                    : null
+                                );
+                                form.setValue("status", item.status);
+                              }}
+                            >
+                              Modifica
+                            </button>
+
+                            <button
+                              className="text-red-600 hover:text-red-900"
+                              onClick={() => handleDeleteItem(item.id)}
+                            >
+                              Elimina
+                            </button>
+
                             <button
                               className="text-primary-600 hover:text-primary-900"
                               onClick={() => {
@@ -372,13 +506,15 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                               Notifiche
                             </button>
                           </td>
+
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {item.file_url ? (
                               <a
-                                href={item.file_url}
+                                href={`${import.meta.env.VITE_API_URL}${
+                                  item.file_url
+                                }`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title={item.file_url.split("/").pop()}
                                 className="flex items-center justify-center"
                               >
                                 <FileIcon

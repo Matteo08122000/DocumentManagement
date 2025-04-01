@@ -3,6 +3,10 @@ import session from "express-session";
 import cors from "cors";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
+import { fileURLToPath } from "url";
+import path from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const MySQLStoreFactory = require("express-mysql-session");
 const MySQLStore = MySQLStoreFactory(session);
 
@@ -82,6 +86,7 @@ app.use((req, res, next) => {
 });
 
 // ✅ Mount delle route modularizzate (REST API)
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use("/api", documentRoutes);
 
 // ✅ Avvio server + error handling

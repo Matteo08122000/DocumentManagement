@@ -1,0 +1,194 @@
+Folder map of c:\Users\teoni\Desktop\DocumentManagement
+==================================================
+
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── dashboard/
+│   │   │   │   ├── DocumentStatusSummary.tsx
+│   │   │   │   └── DocumentTable.tsx
+│   │   │   ├── layout/
+│   │   │   │   ├── footer.tsx
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── main-layout.tsx
+│   │   │   │   ├── navbar.tsx
+│   │   │   │   └── sidebar.tsx
+│   │   │   ├── modals/
+│   │   │   │   ├── DocumentDetailModal.tsx
+│   │   │   │   ├── EmailNotificationModal.tsx
+│   │   │   │   └── UploadModal.tsx
+│   │   │   ├── ui/
+│   │   │   │   ├── accordion.tsx
+│   │   │   │   ├── alert-dialog.tsx
+│   │   │   │   ├── alert.tsx
+│   │   │   │   ├── aspect-ratio.tsx
+│   │   │   │   ├── avatar.tsx
+│   │   │   │   ├── badge.tsx
+│   │   │   │   ├── breadcrumb.tsx
+│   │   │   │   ├── button.tsx
+│   │   │   │   ├── calendar.tsx
+│   │   │   │   ├── card.tsx
+│   │   │   │   ├── carousel.tsx
+│   │   │   │   ├── chart.tsx
+│   │   │   │   ├── checkbox.tsx
+│   │   │   │   ├── collapsible.tsx
+│   │   │   │   ├── command.tsx
+│   │   │   │   ├── context-menu.tsx
+│   │   │   │   ├── dialog.tsx
+│   │   │   │   ├── drawer.tsx
+│   │   │   │   ├── dropdown-menu.tsx
+│   │   │   │   ├── FileIcon.tsx
+│   │   │   │   ├── form.tsx
+│   │   │   │   ├── hover-card.tsx
+│   │   │   │   ├── input-otp.tsx
+│   │   │   │   ├── input.tsx
+│   │   │   │   ├── label.tsx
+│   │   │   │   ├── menubar.tsx
+│   │   │   │   ├── navigation-menu.tsx
+│   │   │   │   ├── pagination.tsx
+│   │   │   │   ├── popover.tsx
+│   │   │   │   ├── progress.tsx
+│   │   │   │   ├── radio-group.tsx
+│   │   │   │   ├── resizable.tsx
+│   │   │   │   ├── scroll-area.tsx
+│   │   │   │   ├── select.tsx
+│   │   │   │   ├── separator.tsx
+│   │   │   │   ├── sheet.tsx
+│   │   │   │   ├── sidebar.tsx
+│   │   │   │   ├── skeleton.tsx
+│   │   │   │   ├── slider.tsx
+│   │   │   │   ├── StatusEmoji.tsx
+│   │   │   │   ├── switch.tsx
+│   │   │   │   ├── table.tsx
+│   │   │   │   ├── tabs.tsx
+│   │   │   │   ├── textarea.tsx
+│   │   │   │   ├── toast.tsx
+│   │   │   │   ├── toaster.tsx
+│   │   │   │   ├── toggle-group.tsx
+│   │   │   │   ├── toggle.tsx
+│   │   │   │   └── tooltip.tsx
+│   │   │   ├── document-table.tsx
+│   │   │   ├── document-upload.tsx
+│   │   │   ├── email-notification-modal.tsx
+│   │   │   ├── revision-upload-modal.tsx
+│   │   │   └── status-summary.tsx
+│   │   ├── hooks/
+│   │   │   ├── use-auth.tsx
+│   │   │   ├── use-mobile.tsx
+│   │   │   ├── use-toast.ts
+│   │   │   ├── useDocuments.ts
+│   │   │   ├── useDocumentUpload.ts
+│   │   │   └── useModal.ts
+│   │   ├── lib/
+│   │   │   ├── dateUtils.ts
+│   │   │   ├── document-parser.ts
+│   │   │   ├── file-utils.ts
+│   │   │   ├── fileUtils.ts
+│   │   │   ├── queryClient.ts
+│   │   │   └── utils.ts
+│   │   ├── pages/
+│   │   │   ├── AboutUs.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── document-detail.tsx
+│   │   │   ├── home.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── not-found.tsx
+│   │   │   ├── Notifications.tsx
+│   │   │   ├── obsolete-documents.tsx
+│   │   │   ├── Obsolete.tsx
+│   │   │   ├── Register.tsx
+│   │   │   └── Support.tsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   └── main.tsx
+│   ├── index.html
+│   └── struttura.txt
+├── server/
+│   ├── lib/
+│   │   └── db.ts
+│   ├── middlewares/
+│   │   ├── uploadBulk.ts
+│   │   └── uploadItemFile.ts
+│   ├── routes/
+│   │   ├── documentRoutes.ts
+│   │   └── routes.ts
+│   ├── utils/
+│   │   ├── calculateState.ts
+│   │   ├── getFileType.ts
+│   │   └── parseDocumentName.ts
+│   ├── auth.ts
+│   ├── dbConnection.ts
+│   ├── index.ts
+│   ├── storage.ts
+│   └── vite.ts
+├── shared/
+│   └── schema.ts
+├── uploads/
+│   ├── bulk/
+│   │   ├── 1743345147985-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   │   ├── 1743345305084-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 1743345348314-_10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 1743348568403-Cruscotto SGI (1).pdf
+│   │   ├── 1743348648992-10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 1743348732808-10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 1743362952756-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   │   ├── 1743366970180-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 1743444881174-10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 1743505658304-10.2-regitro non conformitÃ -Rev.1-20250319.xlsx
+│   │   ├── 1743505846156-3.2-FileFake-Rev.1-20250401.xlsx
+│   │   ├── 1743505940360-3.2-FileFake-Rev.2-20250401.xlsx
+│   │   └── 1743506006865-3.2-FileFake-Rev.3-20250402.xlsx
+│   ├── items/
+│   │   ├── 1/
+│   │   │   └── 1743291954410-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 10/
+│   │   │   └── 1743442861179-10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 11/
+│   │   │   └── 1743443216378-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   │   ├── 12/
+│   │   │   └── 1743444864568-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   │   ├── 13/
+│   │   │   └── 1743505475483-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 2/
+│   │   │   └── 1743292369450-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 3/
+│   │   │   └── 1743337880594-_10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 4/
+│   │   │   └── 1743345200624-_10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 5/
+│   │   │   └── 1743365274781-10.1-prova doc-Rev.4-20250325.docx
+│   │   ├── 6/
+│   │   │   └── 1743366999497-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 7/
+│   │   │   └── 1743441933196-10.2-regitro non conformitÃ -Rev.1-20250319 (2).xlsx
+│   │   ├── 8/
+│   │   │   └── 1743442367235-10.2-regitro non conformitÃ -Rev.1-20250319.xlsx
+│   │   └── 9/
+│   │       └── 1743442491810-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   ├── obsoleti/
+│   ├── 1743283289876-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   ├── 1743283289877-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
+│   ├── 1743283289877-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   ├── 1743283387292-CRUSCOTTO SGI istruzioni d'uso.docx
+│   ├── 1743283407935-lettera di presentazione.pdf
+│   ├── 1743288802273-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   ├── 1743288802275-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
+│   ├── 1743288802276-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   ├── 1743288831264-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   ├── 1743288831264-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
+│   ├── 1743288831264-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   ├── 1743290326277-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   ├── 1743290326279-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
+│   └── 1743290326280-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+├── .env
+├── .gitignore
+├── check_users.js
+├── drizzle.config.ts
+├── generated-icon.png
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── tailwind.config.ts
+├── theme.json
+├── tsconfig.json
+└── vite.config.ts  ecco la struttura del progetto 

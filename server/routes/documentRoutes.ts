@@ -191,7 +191,7 @@ router.post(
         originalName: file.originalname,
       });
 
-      const file_url = `/uploads/${file.filename}`;
+      const file_url = `/uploads/items/${itemId}/${file.filename}`;
 
       await db
         .update(documentItems)
@@ -276,6 +276,23 @@ router.put("/documents/items/:id", isAuthenticated, async (req, res) => {
     res.status(500).json({
       message: "Errore nell'aggiornamento dell'elemento del documento",
     });
+  }
+});
+// DELETE /documents/items/:id
+router.delete("/documents/items/:id", isAuthenticated, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const existing = await storage.getDocumentItemById(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Elemento non trovato" });
+    }
+
+    await storage.deleteDocumentItem(id);
+    res.status(200).json({ message: "Elemento eliminato con successo" });
+  } catch (error) {
+    console.error("Errore durante l'eliminazione dell'elemento:", error);
+    res.status(500).json({ message: "Errore interno del server" });
   }
 });
 

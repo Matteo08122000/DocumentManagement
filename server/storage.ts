@@ -309,4 +309,14 @@ export const storage = {
       });
     });
   },
+
+  async deleteDocumentItem(id: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const query = "DELETE FROM document_items WHERE id = ?";
+      pool.query(query, [id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
 };

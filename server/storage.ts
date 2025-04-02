@@ -1,6 +1,8 @@
 // storage.ts
 import mysql from "mysql";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 dotenv.config();
 
 export type User = {
@@ -216,11 +218,15 @@ export const storage = {
     updateData: Partial<Document>
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const fields = Object.keys(updateData)
-        .map((key) => `${key} = ?`)
-        .join(", ");
+      const keys = Object.keys(updateData);
+      if (keys.length === 0) {
+        return reject(new Error("Nessun campo da aggiornare"));
+      }
+
+      const fields = keys.map((key) => `${key} = ?`).join(", ");
       const values = Object.values(updateData);
       const query = `UPDATE documents SET ${fields} WHERE id = ?`;
+
       pool.query(query, [...values, id], (error) => {
         if (error) return reject(error);
         resolve(true);
@@ -318,5 +324,32 @@ export const storage = {
         resolve(true);
       });
     });
+  },
+
+  async deleteDocument(id: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const query = "DELETE FROM documents WHERE id = ?";
+      pool.query(query, [id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
+
+  async moveToObsolete(oldPath: string): Promise<string | null> {
+    try {
+      const obsoleteDir = path.resolve(process.cwd(), "uploads", "obsoleti");
+      fs.mkdirSync(obsoleteDir, { recursive: true });
+
+      const fileName = path.basename(oldPath);
+      const newPath = path.join(obsoleteDir, fileName);
+
+      fs.renameSync(oldPath, newPath);
+
+      return newPath;
+    } catch (err) {
+      console.error("Errore spostamento in obsoleti:", err);
+      return null;
+    }
   },
 };

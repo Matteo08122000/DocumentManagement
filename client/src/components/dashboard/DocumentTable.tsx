@@ -1,9 +1,14 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/lib/dateUtils";
 import FileIcon from "@/components/ui/FileIcon";
 import StatusEmoji from "@/components/ui/StatusEmoji";
+import path from "path-browserify";
+import { useToast } from "@/hooks/use-toast";
 import { Document } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
+import DocumentEditModal from "../DocumentEditModal";
 
 interface DocumentTableProps {
   onViewDocument: (document: Document) => void;
@@ -25,6 +30,61 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   } = useQuery<Document[]>({
     queryKey: ["/api/documents"],
   });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+
+  const handleEdit = (doc: Document) => {
+    setSelectedDoc(doc);
+    setEditModalOpen(true);
+  };
+
+  const inferLabelFromMime = (mime: string) => {
+    const lower = mime.toLowerCase();
+
+    if (lower.includes("sheet") || lower.includes("excel")) return "Excel";
+    if (lower.includes("word")) return "Word";
+    if (lower.includes("pdf")) return "PDF";
+
+    return "Documento";
+  };
+
+  const onDeleteDocument = async (document: Document) => {
+    const confirmed = window.confirm(
+      `Sei sicuro di voler eliminare il documento "${document.title}"?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/documents/${document.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Errore durante l'eliminazione del documento");
+      }
+
+      toast({
+        title: "Documento eliminato",
+        description: "Il documento è stato rimosso correttamente",
+      });
+
+      // Aggiorna la lista
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'eliminazione",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -193,38 +253,50 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     {formatDate(document.emissionDate)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <FileIcon fileType={document.fileType} />
-                      <span className="text-sm text-gray-900 ml-1">
-                        {document.fileType.charAt(0).toUpperCase() +
-                          document.fileType.slice(1)}
-                      </span>
-                    </div>
+                    {document.filePath ? (
+                      <a
+                        href={`${
+                          import.meta.env.VITE_API_URL
+                        }${document.filePath.replace(/.*uploads/, "/uploads")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <FileIcon fileType={document.fileType} />
+                        <span className="text-sm text-gray-900 ml-1">
+                          {inferLabelFromMime(document.fileType)}
+                        </span>
+                      </a>
+                    ) : (
+                      <div className="flex items-center text-gray-400">-</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusEmoji status={document.status} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
+                      {/* Bottone modifica */}
                       <button
-                        className="text-primary-600 hover:text-primary-900"
+                        className="text-blue-600 hover:text-blue-900"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onViewDocument(document);
-                        }}
-                      >
-                        <span className="material-icons-round">
-                          open_in_new
-                        </span>
-                      </button>
-                      <button
-                        className="text-primary-600 hover:text-primary-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditDocument(document);
+                          handleEdit(document); // usa lo state interno
                         }}
                       >
                         <span className="material-icons-round">edit</span>
+                      </button>
+
+                      {/* Bottone elimina */}
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteDocument(document);
+                        }}
+                      >
+                        <span className="material-icons-round">delete</span>
                       </button>
                     </div>
                   </td>
@@ -234,6 +306,12 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      <DocumentEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        document={selectedDoc}
+      />
 
       {totalPages > 1 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">

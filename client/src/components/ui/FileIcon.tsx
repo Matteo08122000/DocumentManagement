@@ -1,7 +1,7 @@
 import React from "react";
 
 interface FileIconProps {
-  fileType?: string | null; // Permetti anche undefined/null
+  fileType?: string | null; // può arrivare null o undefined
 }
 
 const FileIcon: React.FC<FileIconProps> = ({ fileType }) => {
@@ -10,10 +10,19 @@ const FileIcon: React.FC<FileIconProps> = ({ fileType }) => {
 
   const type = fileType?.toLowerCase() || "";
 
-  if (type.includes("excel") || type.includes("xlsx") || type.includes("xls")) {
+  if (
+    type.includes("excel") ||
+    type.includes("spreadsheetml") ||
+    type.includes("xls") ||
+    type.includes("sheet")
+  ) {
     iconName = "description";
     colorClass = "text-green-600";
-  } else if (type.includes("word") || type.includes("doc")) {
+  } else if (
+    type.includes("word") ||
+    type.includes("document") || // <- fix per mimetype word
+    type.includes("doc")
+  ) {
     iconName = "article";
     colorClass = "text-blue-600";
   } else if (type.includes("pdf")) {

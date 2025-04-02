@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { ZodError } from "zod";
+import { uploadSingleDoc } from "../middlewares/uploadSingleDoc";
 import { fromZodError } from "zod-validation-error";
 import {
   insertDocumentSchema,
@@ -238,23 +239,63 @@ router.put("/documents/:id/obsolete", isAuthenticated, async (req, res) => {
 });
 
 // PUT /documents/:id
-router.put("/documents/:id", isAuthenticated, async (req, res) => {
+router.put(
+  "/documents/:id",
+  isAuthenticated,
+  uploadSingleDoc.single("file"),
+  async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocumentById(id);
+      if (!document) {
+        return res.status(404).json({ message: "Documento non trovato" });
+      }
+
+      const { pointNumber, title, revision, emissionDate } = req.body;
+      const file = req.file;
+
+      const updateData: Partial<Document> = {};
+
+      if (pointNumber?.trim()) updateData.pointNumber = pointNumber;
+      if (title?.trim()) updateData.title = title;
+      if (revision?.trim()) updateData.revision = revision;
+      if (emissionDate?.trim())
+        updateData.emissionDate = new Date(emissionDate);
+
+      if (file) {
+        await storage.moveToObsolete(document.filePath); // <-- controlla che venga davvero eseguito
+        updateData.filePath = file.path;
+        updateData.fileType = file.mimetype;
+      }
+
+      const success = await storage.updateDocument(id, updateData);
+      if (!success) throw new Error("Update fallito");
+
+      res.status(200).json({ message: "Documento aggiornato correttamente" });
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res
+        .status(500)
+        .json({ message: "Errore nell'aggiornamento del documento" });
+    }
+  }
+);
+
+// DELETE /documents/:id
+router.delete("/documents/:id", isAuthenticated, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const documentUpdate = req.body;
 
-    const document = await storage.getDocumentById(id);
-    if (!document) {
+    const existing = await storage.getDocumentById(id);
+    if (!existing) {
       return res.status(404).json({ message: "Documento non trovato" });
     }
 
-    const updated = await storage.updateDocument(id, documentUpdate);
-    res.json(updated);
+    await storage.deleteDocument(id);
+    res.status(200).json({ message: "Documento eliminato con successo" });
   } catch (error) {
-    console.error("Error updating document:", error);
-    res
-      .status(500)
-      .json({ message: "Errore nell'aggiornamento del documento" });
+    console.error("Errore durante l'eliminazione del documento:", error);
+    res.status(500).json({ message: "Errore interno del server" });
   }
 });
 

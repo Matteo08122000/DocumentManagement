@@ -238,7 +238,6 @@ router.put("/documents/:id/obsolete", isAuthenticated, async (req, res) => {
   }
 });
 
-// PUT /documents/:id
 router.put(
   "/documents/:id",
   isAuthenticated,
@@ -256,22 +255,48 @@ router.put(
 
       const updateData: Partial<Document> = {};
 
+      const emissionDateParsed = emissionDate?.trim()
+        ? new Date(emissionDate)
+        : null;
+
+      // Verifica se ci sono differenze nei metadati
+      const metadataChanged =
+        (pointNumber && pointNumber !== document.pointNumber) ||
+        (title && title !== document.title) ||
+        (revision && revision !== document.revision) ||
+        (emissionDateParsed &&
+          new Date(document.emissionDate).toISOString().split("T")[0] !==
+            emissionDateParsed.toISOString().split("T")[0]);
+
+      // Se file nuovo caricato
+      if (file) {
+        await storage.moveToObsolete(document.filePath);
+        updateData.filePath = file.path;
+        updateData.fileType = file.mimetype;
+      } else if (metadataChanged) {
+        // Nessun nuovo file ma metadati modificati
+        await storage.moveToObsolete(document.filePath);
+        updateData.filePath = document.filePath; // rimane invariato
+        updateData.fileType = document.fileType;
+      } else {
+        // Niente da aggiornare
+        return res.status(200).json({
+          message: "Nessuna modifica rilevata",
+        });
+      }
+
       if (pointNumber?.trim()) updateData.pointNumber = pointNumber;
       if (title?.trim()) updateData.title = title;
       if (revision?.trim()) updateData.revision = revision;
-      if (emissionDate?.trim())
-        updateData.emissionDate = new Date(emissionDate);
-
-      if (file) {
-        await storage.moveToObsolete(document.filePath); // <-- controlla che venga davvero eseguito
-        updateData.filePath = file.path;
-        updateData.fileType = file.mimetype;
-      }
+      if (emissionDateParsed) updateData.emissionDate = emissionDateParsed;
 
       const success = await storage.updateDocument(id, updateData);
       if (!success) throw new Error("Update fallito");
 
-      res.status(200).json({ message: "Documento aggiornato correttamente" });
+      res.status(200).json({
+        message:
+          "Documento aggiornato e versione precedente spostata in obsoleti",
+      });
     } catch (error) {
       console.error("Error updating document:", error);
       res

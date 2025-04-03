@@ -344,8 +344,7 @@ export const storage = {
       const fileName = path.basename(oldPath);
       const newPath = path.join(obsoleteDir, fileName);
 
-      fs.renameSync(oldPath, newPath);
-
+      fs.copyFileSync(oldPath, newPath); // <-- cambia da renameSync a copyFileSync
       return newPath;
     } catch (err) {
       console.error("Errore spostamento in obsoleti:", err);

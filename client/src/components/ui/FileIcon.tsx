@@ -1,7 +1,7 @@
 import React from "react";
 
 interface FileIconProps {
-  fileType?: string | null; // può arrivare null o undefined
+  fileType?: string | null;
 }
 
 const FileIcon: React.FC<FileIconProps> = ({ fileType }) => {
@@ -20,7 +20,7 @@ const FileIcon: React.FC<FileIconProps> = ({ fileType }) => {
     colorClass = "text-green-600";
   } else if (
     type.includes("word") ||
-    type.includes("document") || // <- fix per mimetype word
+    type.includes("document") || 
     type.includes("doc")
   ) {
     iconName = "article";

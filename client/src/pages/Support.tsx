@@ -105,7 +105,7 @@ const Support: React.FC = () => {
                     email
                   </span>
                   <span className="text-sm whitespace-nowrap">
-                    lucaorao4@gmail.com
+                    docgenius8@gmail.com
                   </span>
                 </div>
                 <div className="flex items-center">

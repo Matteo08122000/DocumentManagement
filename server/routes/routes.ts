@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import { insertNotificationSchema, documentStatus } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { sendSupportEmail } from "../email"; // o il path giusto se è in un'altra cartella
 import * as auth from "../auth";
 const { isAuthenticated } = auth;
 
@@ -53,24 +54,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app._router.handle(req, res);
   });
 
-  // Email notifications - Solo utenti autenticati
-  app.post("/api/notifications", isAuthenticated, async (req, res) => {
-    try {
-      const notificationData = insertNotificationSchema.parse(req.body);
-      const notification = await storage.createNotification(notificationData);
-      res.status(201).json(notification);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: fromZodError(error).message });
-      }
-
-      console.error("Error creating notification:", error);
-      res
-        .status(500)
-        .json({ message: "Errore nella creazione della notifica" });
-    }
-  });
-
   // Get notifications
   app.get("/api/notifications", async (req, res) => {
     try {
@@ -90,13 +73,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email notifications - Solo utenti autenticati
+  app.post("/api/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const notificationData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(notificationData);
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+
+      console.error("Error creating notification:", error);
+      res
+        .status(500)
+        .json({ message: "Errore nella creazione della notifica" });
+    }
+  });
+
   // Endpoint per il supporto
   app.post("/api/support", async (req, res) => {
     try {
-      // Verifica che la risposta sia JSON
-      res.setHeader("Content-Type", "application/json");
-
-      // Valida i dati di input
       const { name, email, subject, message } = req.body;
 
       if (!name || !email || !subject || !message) {
@@ -106,28 +103,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // In una implementazione reale, qui salveremmo il messaggio o invieremmo una email
-      console.log("Messaggio di supporto ricevuto:", {
-        name,
-        email,
-        subject,
-        message,
-      });
+      await sendSupportEmail(name, email, subject, message);
 
-      // Invio risposta di successo
       res.status(200).json({
         success: true,
         message: "Messaggio inviato con successo",
       });
     } catch (error) {
-      console.error(
-        "Errore nell'elaborazione della richiesta di supporto:",
-        error
-      );
+      console.error("Errore nell'invio dell'email:", error);
       res.status(500).json({
         error: "Errore del server",
-        message:
-          "Si è verificato un errore durante l'elaborazione della richiesta",
+        message: "Impossibile inviare il messaggio",
       });
     }
   });

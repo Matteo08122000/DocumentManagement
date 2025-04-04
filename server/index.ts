@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import cors from "cors";
 import { createRequire } from "module";
+import "./jobs/notificationJob";
+import testEmailRouter from "./routes/testEmail";
 const require = createRequire(import.meta.url);
 import { fileURLToPath } from "url";
 import path from "path";
@@ -48,11 +50,12 @@ app.use(
     store: sessionStore,
     name: "docgenius.sid",
     cookie: {
-      secure: process.env.NODE_ENV === "production", // true solo in produzione
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 giorni
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000, // 15 minuti
       httpOnly: true,
       sameSite: "lax",
     },
+    rolling: true, // Aggiorna il cookie ad ogni richiesta attiva
   })
 );
 
@@ -88,6 +91,7 @@ app.use((req, res, next) => {
 // ✅ Mount delle route modularizzate (REST API)
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use("/api", documentRoutes);
+app.use("/api", testEmailRouter);
 
 // ✅ Avvio server + error handling
 (async () => {

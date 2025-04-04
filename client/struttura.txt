@@ -69,6 +69,7 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   │   │   └── tooltip.tsx
 │   │   │   ├── document-table.tsx
 │   │   │   ├── document-upload.tsx
+│   │   │   ├── DocumentEditModal.tsx
 │   │   │   ├── email-notification-modal.tsx
 │   │   │   ├── revision-upload-modal.tsx
 │   │   │   └── status-summary.tsx
@@ -82,7 +83,7 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   ├── lib/
 │   │   │   ├── dateUtils.ts
 │   │   │   ├── document-parser.ts
-│   │   │   ├── file-utils.ts
+│   │   │   ├── file-utils.tsx
 │   │   │   ├── fileUtils.ts
 │   │   │   ├── queryClient.ts
 │   │   │   └── utils.ts
@@ -101,6 +102,7 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   ├── App.tsx
 │   │   ├── index.css
 │   │   └── main.tsx
+│   ├── .env
 │   ├── index.html
 │   └── struttura.txt
 ├── server/
@@ -108,7 +110,8 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   └── db.ts
 │   ├── middlewares/
 │   │   ├── uploadBulk.ts
-│   │   └── uploadItemFile.ts
+│   │   ├── uploadItemFile.ts
+│   │   └── uploadSingleDoc.ts
 │   ├── routes/
 │   │   ├── documentRoutes.ts
 │   │   └── routes.ts
@@ -137,7 +140,26 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   ├── 1743505658304-10.2-regitro non conformitÃ -Rev.1-20250319.xlsx
 │   │   ├── 1743505846156-3.2-FileFake-Rev.1-20250401.xlsx
 │   │   ├── 1743505940360-3.2-FileFake-Rev.2-20250401.xlsx
-│   │   └── 1743506006865-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743506006865-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743603471795-10.2-REGISTRO_NON_CONFORMITA-REV.1-20250324.xlsx
+│   │   ├── 1743603517971-lettera di presentazione.pdf
+│   │   ├── 1743603549118-11.1-Convert_to_pdf-Rev.1-20250322.pdf
+│   │   ├── 1743611496090-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
+│   │   ├── 1743611506559-1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743611803669-1743521190924-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 1743612424481-1743603194040-3.2-FileFake-Rev.3-20250402 (1).xlsx
+│   │   ├── 1743613656656-1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743613662853-1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743613686310-1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 1743613732198-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1743614979763-1743613766974-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743615342883-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 1743615357992-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   ├── 1743639971026-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   └── 1743639971032-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
 │   ├── items/
 │   │   ├── 1/
 │   │   │   └── 1743291954410-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
@@ -149,8 +171,28 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   │   └── 1743444864568-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
 │   │   ├── 13/
 │   │   │   └── 1743505475483-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 14/
+│   │   │   └── 1743516519690-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   ├── 15/
+│   │   │   └── 1743516558007-lettera di presentazione.pdf
+│   │   ├── 16/
+│   │   │   └── 1743518614817-lettera di presentazione.pdf
+│   │   ├── 17/
+│   │   │   └── 1743521100899-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   ├── 18/
+│   │   │   └── 1743521190924-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 19/
+│   │   │   └── 1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
 │   │   ├── 2/
 │   │   │   └── 1743292369450-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
+│   │   ├── 20/
+│   │   │   └── 1743538737932-3.2-FileFake-Rev.3-20250402.xlsx
+│   │   ├── 21/
+│   │   │   └── 1743539253076-lettera di presentazione.pdf
+│   │   ├── 22/
+│   │   │   └── 1743615442849-10.2-REGISTRO_NON_CONFORMITA-REV.1-20250324.xlsx
+│   │   ├── 23/
+│   │   │   └── 1743615471246-CRUSCOTTO SGI istruzioni d'uso.docx
 │   │   ├── 3/
 │   │   │   └── 1743337880594-_10.1-prova doc-Rev.4-20250325.docx
 │   │   ├── 4/
@@ -166,6 +208,15 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   └── 9/
 │   │       └── 1743442491810-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
 │   ├── obsoleti/
+│   │   ├── 1743290326279-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
+│   │   ├── 1743290326280-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743613732201-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1743613766974-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743615333289-1743521100899-CRUSCOTTO SGI istruzioni d'uso (3).docx
+│   │   ├── 1743615377337-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   └── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
 │   ├── 1743283289876-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
 │   ├── 1743283289877-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
 │   ├── 1743283289877-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
@@ -177,9 +228,7 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   ├── 1743288831264-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
 │   ├── 1743288831264-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
 │   ├── 1743288831264-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   ├── 1743290326277-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   ├── 1743290326279-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
-│   └── 1743290326280-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   └── 1743290326277-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
 ├── .env
 ├── .gitignore
 ├── check_users.js
@@ -191,4 +240,4 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 ├── tailwind.config.ts
 ├── theme.json
 ├── tsconfig.json
-└── vite.config.ts  ecco la struttura del progetto 
+└── vite.config.ts

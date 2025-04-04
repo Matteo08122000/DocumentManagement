@@ -70,7 +70,7 @@ export const documentItems = mysqlTable("document_items", {
   notificationDays: int("notification_days").default(30),
   status: varchar("status", { length: 50 }).default("valid").notNull(),
   metadata: json("metadata"),
-  file_url: varchar("file_url", { length: 1024 }), // Ecco come rendere il campo "nullable"
+  file_url: varchar("file_url", { length: 1024 }), 
 });
 
 export const insertDocumentItemSchema = createInsertSchema(documentItems)

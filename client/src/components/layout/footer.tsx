@@ -66,13 +66,6 @@ export default function Footer() {
                   </a>
                 </Link>
               </li>
-              <li>
-                <Link href="/notifiche">
-                  <a className="text-sm text-gray-600 hover:text-blue-600">
-                    Notifiche
-                  </a>
-                </Link>
-              </li>
             </ul>
           </div>
 

@@ -3,7 +3,6 @@ import session from "express-session";
 import cors from "cors";
 import { createRequire } from "module";
 import "./jobs/notificationJob";
-import testEmailRouter from "./routes/testEmail";
 const require = createRequire(import.meta.url);
 import { fileURLToPath } from "url";
 import path from "path";
@@ -91,7 +90,6 @@ app.use((req, res, next) => {
 // ✅ Mount delle route modularizzate (REST API)
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use("/api", documentRoutes);
-app.use("/api", testEmailRouter);
 
 // ✅ Avvio server + error handling
 (async () => {

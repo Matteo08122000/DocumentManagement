@@ -70,7 +70,7 @@ export const documentItems = mysqlTable("document_items", {
   notificationDays: int("notification_days").default(30),
   status: varchar("status", { length: 50 }).default("valid").notNull(),
   metadata: json("metadata"),
-  file_url: varchar("file_url", { length: 1024 }), 
+  file_url: varchar("file_url", { length: 1024 }),
 });
 
 export const insertDocumentItemSchema = createInsertSchema(documentItems)
@@ -86,7 +86,10 @@ export const insertDocumentItemSchema = createInsertSchema(documentItems)
 // EMAIL NOTIFICATION SCHEMA
 export const notifications = mysqlTable("notifications", {
   id: serial("id").primaryKey(),
+  userId: int("user_id").notNull(), // aggiunto
   email: varchar("email", { length: 255 }).notNull(),
+  message: varchar("message", { length: 1000 }).notNull(), // aggiunto
+  is_read: boolean("is_read").default(false), // aggiunto
   documentId: int("document_id"),
   documentItemId: int("document_item_id"),
   notificationDays: int("notification_days").notNull().default(30),
@@ -94,10 +97,16 @@ export const notifications = mysqlTable("notifications", {
   createdAt: datetime("created_at").default(new Date()),
 });
 
-export const insertNotificationSchema = createInsertSchema(notifications).omit({
-  id: true,
-  createdAt: true,
+export const insertNotificationSchema = z.object({
+  documentId: z.number().optional(),
+  documentItemId: z.number().optional(),
+  message: z.string(),
+  email: z.string().email(),
+  notificationDays: z.number(),
+  is_read: z.boolean().optional(),
+  active: z.boolean().optional(),
 });
+
 
 // EXPORT TYPES
 export type User = typeof users.$inferSelect;

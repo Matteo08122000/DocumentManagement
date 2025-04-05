@@ -1,5 +1,3 @@
-Folder map of c:\Users\teoni\Desktop\DocumentManagement
-==================================================
 
 ├── client/
 │   ├── src/
@@ -79,6 +77,7 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   │   ├── use-toast.ts
 │   │   │   ├── useDocuments.ts
 │   │   │   ├── useDocumentUpload.ts
+│   │   │   ├── useIdleTimer.tsx
 │   │   │   └── useModal.ts
 │   │   ├── lib/
 │   │   │   ├── dateUtils.ts
@@ -106,6 +105,8 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   ├── index.html
 │   └── struttura.txt
 ├── server/
+│   ├── jobs/
+│   │   └── notificationJob.ts
 │   ├── lib/
 │   │   └── db.ts
 │   ├── middlewares/
@@ -114,17 +115,19 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   └── uploadSingleDoc.ts
 │   ├── routes/
 │   │   ├── documentRoutes.ts
-│   │   └── routes.ts
+│   │   ├── routes.ts
+│   │   └── testEmail.ts
 │   ├── utils/
-│   │   ├── calculateState.ts
 │   │   ├── getFileType.ts
 │   │   └── parseDocumentName.ts
 │   ├── auth.ts
 │   ├── dbConnection.ts
+│   ├── email.ts
 │   ├── index.ts
 │   ├── storage.ts
 │   └── vite.ts
 ├── shared/
+│   ├── documentUtils.ts
 │   └── schema.ts
 ├── uploads/
 │   ├── bulk/
@@ -159,7 +162,12 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
 │   │   ├── 1743639971026-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
 │   │   ├── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   └── 1743639971032-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1743639971032-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1743771370275-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1743771370278-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743771370279-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1743774758627-3.2-FileFake-Rev.3-20250402.docx
+│   │   └── 1743774867749-3.2-FileFake-Rev.3-20250402.docx
 │   ├── items/
 │   │   ├── 1/
 │   │   │   └── 1743291954410-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
@@ -193,6 +201,16 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   │   └── 1743615442849-10.2-REGISTRO_NON_CONFORMITA-REV.1-20250324.xlsx
 │   │   ├── 23/
 │   │   │   └── 1743615471246-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   ├── 24/
+│   │   │   └── 1743771457879-lettera di presentazione.pdf
+│   │   ├── 25/
+│   │   │   └── 1743771539898-CRUSCOTTO SGI istruzioni d'uso.docx
+│   │   ├── 26/
+│   │   │   └── 1743772082028-lettera di presentazione.pdf
+│   │   ├── 27/
+│   │   │   └── 1743775183486-lettera di presentazione.pdf
+│   │   ├── 28/
+│   │   │   └── 1743775378635-3.2-FileFake-Rev.3-20250402.docx
 │   │   ├── 3/
 │   │   │   └── 1743337880594-_10.1-prova doc-Rev.4-20250325.docx
 │   │   ├── 4/
@@ -216,7 +234,9 @@ Folder map of c:\Users\teoni\Desktop\DocumentManagement
 │   │   ├── 1743615333289-1743521100899-CRUSCOTTO SGI istruzioni d'uso (3).docx
 │   │   ├── 1743615377337-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
 │   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   └── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743771370275-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   └── 1743774758627-3.2-FileFake-Rev.3-20250402.docx
 │   ├── 1743283289876-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
 │   ├── 1743283289877-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
 │   ├── 1743283289877-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx

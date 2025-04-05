@@ -61,9 +61,11 @@ const EmailNotificationModal: React.FC<EmailNotificationModalProps> = ({
         documentId,
         documentItemId,
         notificationDays: data.notificationDays,
+        message: "Notifica automatica configurata", 
         active: true,
       });
     },
+
     onSuccess: () => {
       toast({
         title: "Notifica configurata",

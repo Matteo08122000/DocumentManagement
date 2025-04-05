@@ -76,9 +76,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email notifications - Solo utenti autenticati
   app.post("/api/notifications", isAuthenticated, async (req, res) => {
     try {
+      const userId = req.session.userId; // <<< da sessione
+      if (!userId) return res.status(401).json({ message: "Non autenticato" });
+
       const notificationData = insertNotificationSchema.parse(req.body);
-      const notification = await storage.createNotification(notificationData);
-      res.status(201).json(notification);
+
+      await storage.createNotification({
+        ...notificationData,
+        userId, // <<< obbligatorio
+      });
+
+      res.status(201).json({ message: "Notifica creata con successo" });
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: fromZodError(error).message });

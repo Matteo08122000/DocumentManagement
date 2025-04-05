@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { ZodError } from "zod";
 import { uploadSingleDoc } from "../middlewares/uploadSingleDoc";
+import { aggregateDocumentStatus } from "@shared/documentUtils";
 import { fromZodError } from "zod-validation-error";
 import {
   insertDocumentSchema,
@@ -20,6 +21,7 @@ import { db } from "../lib/db";
 const router = Router();
 
 // GET /documents
+// GET /documents
 router.get("/documents", isAuthenticated, async (req, res) => {
   try {
     // @ts-ignore
@@ -27,17 +29,25 @@ router.get("/documents", isAuthenticated, async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Non autenticato" });
 
     const includeObsolete = req.query.includeObsolete === "true";
-
     const documents = await storage.getDocuments(userId, includeObsolete);
 
     const parentDocs = documents.filter((doc) => !doc.parentId);
-    parentDocs.sort((a, b) => {
-      const aNum = parseFloat(a.pointNumber.replace(/,/g, "."));
-      const bNum = parseFloat(b.pointNumber.replace(/,/g, "."));
-      return aNum - bNum;
-    });
 
-    res.json(parentDocs);
+    const documentsWithStatus = await Promise.all(
+      parentDocs.map(async (doc) => {
+        const items = await storage.getDocumentItems(doc.id);
+        const status = aggregateDocumentStatus(items);
+        return { ...doc, status };
+      })
+    );
+
+    res.json(
+      documentsWithStatus.sort((a, b) => {
+        const aNum = parseFloat(a.pointNumber.replace(/,/g, "."));
+        const bNum = parseFloat(b.pointNumber.replace(/,/g, "."));
+        return aNum - bNum;
+      })
+    );
   } catch (error) {
     console.error("Errore nel recupero dei documenti:", error);
     res.status(500).json({ message: "Errore nel recupero dei documenti" });

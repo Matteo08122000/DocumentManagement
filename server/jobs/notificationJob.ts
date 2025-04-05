@@ -1,45 +1,47 @@
 // server/jobs/notificationJob.ts
 import cron from "node-cron";
 import { sendExpiryNotification } from "../email";
-import { db } from "../lib/db"; // Il tuo modulo di connessione al database
-import { documentStatus, notifications, documentItems } from "@shared/schema";
+import { db } from "../lib/db";
+import { notifications, documentItems } from "@shared/schema";
+import { calcolaStatus } from "@shared/documentUtils";
 
-// Funzione per recuperare i documenti in scadenza e inviare notifiche
 const processNotifications = async () => {
   try {
-    // Esegui una query per recuperare le notifiche attive
-    const activeNotifications = await db.select().from(notifications).where({
-      active: true,
-    });
+    const activeNotifications = await db
+      .select()
+      .from(notifications)
+      .where({ active: true });
 
     for (const notification of activeNotifications) {
-      // Recupera i document items relativi a questa notifica che sono in scadenza
-      const expiringItems = await db
+      const allItems = await db
         .select()
         .from(documentItems)
-        .where({
-          notification_days: notification.notificationDays,
-        })
-        // Filtra per stato "expiring" (questo presuppone che lo stato sia già stato calcolato e salvato)
-        .andWhere("status", "=", documentStatus.EXPIRING);
+        .where({ notification_days: notification.notificationDays });
+
+      const expiringItems = allItems.filter((item) => {
+        const status = calcolaStatus(
+          item.expirationDate,
+          item.notification_days
+        );
+        return status === "expiring"; // oppure documentStatus.EXPIRING se hai importato l'enum
+      });
 
       if (expiringItems.length > 0) {
-        // Invia la email aggregata con le informazioni sui documenti in scadenza
         await sendExpiryNotification(notification.email, expiringItems);
         console.log(
-          `Email inviata a ${notification.email} per ${expiringItems.length} documenti in scadenza.`
+          `📬 Email inviata a ${notification.email} per ${expiringItems.length} documenti in scadenza.`
         );
       }
     }
   } catch (error) {
-    console.error("Errore nel processare le notifiche: ", error);
+    console.error("❌ Errore nel job notifiche: ", error);
   }
 };
 
-// Pianifica il job: ad esempio, ogni ora
-cron.schedule("0 * * * *", async () => {
-  console.log("Esecuzione job notifiche: ", new Date().toLocaleString());
+// Esegui ogni giorno alle 8:00 (modificabile)
+cron.schedule("0 8 * * *", async () => {
+  console.log("🔄 Esecuzione job notifiche: ", new Date().toLocaleString());
   await processNotifications();
 });
 
-console.log("Job scheduler per notifiche avviato.");
+console.log("✅ Scheduler notifiche attivo");

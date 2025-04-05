@@ -1,5 +1,6 @@
 // storage.ts
 import mysql from "mysql";
+import { calcolaStatus } from "@shared/documentUtils";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -40,6 +41,17 @@ export type DocumentItem = {
   file_url?: string | null;
 };
 
+export type Notification = {
+  id: number;
+  userId: number;
+  documentId: number;
+  message: string;
+  is_read: boolean;
+  email: string;
+  notificationDays: number;
+  active: boolean;
+};
+
 const pool = mysql.createPool({
   connectionLimit: 10,
   host: process.env.DB_HOST || "127.0.0.1",
@@ -47,6 +59,36 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE || "docgenius",
 });
+
+async function createNotification(data: {
+  userId: number;
+  documentId: number;
+  message: string;
+  is_read?: boolean;
+  email: string;
+  notificationDays: number;
+  active?: boolean;
+}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const query = `
+      INSERT INTO notifications (userId, documentId, message, is_read, email, notificationDays, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const values = [
+      data.userId,
+      data.documentId,
+      data.message,
+      data.is_read ?? false,
+      data.email,
+      data.notificationDays,
+      data.active ?? true,
+    ];
+    pool.query(query, values, (error) => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+}
 
 export const storage = {
   // === USER FUNCTIONS ===
@@ -151,7 +193,13 @@ export const storage = {
       const query = "SELECT * FROM document_items WHERE documentId = ?";
       pool.query(query, [documentId], (error, results) => {
         if (error) return reject(error);
-        resolve(results as DocumentItem[]);
+
+        const items = (results as DocumentItem[]).map((item) => ({
+          ...item,
+          status: calcolaStatus(item.expirationDate, item.notificationDays),
+        }));
+
+        resolve(items);
       });
     });
   },
@@ -351,4 +399,5 @@ export const storage = {
       return null;
     }
   },
+  createNotification,
 };

@@ -17,7 +17,7 @@ router.get("/test-email", async (req: Request, res: Response) => {
     await sendExpiryNotification(recipient, [
       {
         title: "Documento di Test",
-        expirationDate: new Date(Date.now() + 86400000),
+        expiration_date: new Date(Date.now() + 86400000),
       }, // scade domani
     ]);
     res.json({ message: "Email di test inviata, controlla la tua casella!" });

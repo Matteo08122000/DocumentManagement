@@ -32,7 +32,7 @@ interface EmailNotificationModalProps {
 
 const formSchema = z.object({
   email: z.string().email({ message: "Email non valida" }),
-  notificationDays: z.string().transform((val) => parseInt(val, 10)),
+  notification_value: z.string().transform((val) => parseInt(val, 10)),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,7 +50,7 @@ const EmailNotificationModal: React.FC<EmailNotificationModalProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      notificationDays: "30",
+      notification_value: "30",
     },
   });
 
@@ -60,8 +60,8 @@ const EmailNotificationModal: React.FC<EmailNotificationModalProps> = ({
         email: data.email,
         documentId,
         documentItemId,
-        notificationDays: data.notificationDays,
-        message: "Notifica automatica configurata", 
+        notification_value: data.notification_value,
+        message: "Notifica automatica configurata",
         active: true,
       });
     },

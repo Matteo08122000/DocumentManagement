@@ -16,20 +16,27 @@ const transporter = nodemailer.createTransport({
 
 export const sendExpiryNotification = async (
   email: string,
-  documentItems: { title: string; expirationDate: Date }[]
+  documentItems: { title: string; expiration_date: Date }[]
 ) => {
   const itemsList = documentItems
     .map(
       (item) =>
-        `- ${item.title} scade il ${item.expirationDate.toLocaleDateString()}`
+        `<li><strong>${
+          item.title
+        }</strong> – scadenza: ${item.expiration_date.toLocaleDateString()}</li>`
     )
-    .join("\n");
+    .join("");
 
   const mailOptions = {
     from: '"DocGenius" <docgenius8@gmail.com>',
     to: email,
     subject: "Notifica: Documenti in scadenza",
-    text: `Ciao,\n\nI seguenti documenti stanno per scadere:\n\n${itemsList}\n\nSaluti,\nIl team di DocGenius`,
+    html: `
+    <p>Ciao,</p>
+    <p>I seguenti documenti stanno per scadere:</p>
+    <ul>${itemsList}</ul>
+    <p>Saluti,<br/>Il team di DocGenius</p>
+  `,
   };
 
   await transporter.sendMail(mailOptions);

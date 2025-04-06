@@ -4,6 +4,7 @@ import { calcolaStatus } from "@shared/documentUtils";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import { InsertDocumentItem } from "@shared/schema";
 dotenv.config();
 
 export type User = {
@@ -24,7 +25,7 @@ export type Document = {
   filePath: string;
   fileType: string;
   status: string;
-  expirationDate?: Date | null;
+  expiration_date?: Date | null;
   isObsolete?: boolean;
   parentId?: number | null;
   userId: number;
@@ -35,10 +36,15 @@ export type DocumentItem = {
   documentId: number;
   title: string;
   description?: string;
-  expirationDate?: Date | null;
-  notificationDays?: number;
+  expiration_date?: Date | null;
+  notification_unit?: "days" | "months";
+  notification_value?: number;
   status: string;
   file_url?: string | null;
+  emission_date?: Date;
+  validity_value?: number;
+  validity_unit?: "months" | "years";
+  notification_email?: string | null;
 };
 
 export type Notification = {
@@ -48,47 +54,17 @@ export type Notification = {
   message: string;
   is_read: boolean;
   email: string;
-  notificationDays: number;
+  notification_value: number;
   active: boolean;
 };
 
-const pool = mysql.createPool({
+export const pool = mysql.createPool({
   connectionLimit: 10,
   host: process.env.DB_HOST || "127.0.0.1",
   user: process.env.DB_USERNAME || "root",
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE || "docgenius",
 });
-
-async function createNotification(data: {
-  userId: number;
-  documentId: number;
-  message: string;
-  is_read?: boolean;
-  email: string;
-  notificationDays: number;
-  active?: boolean;
-}): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const query = `
-      INSERT INTO notifications (userId, documentId, message, is_read, email, notificationDays, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-    const values = [
-      data.userId,
-      data.documentId,
-      data.message,
-      data.is_read ?? false,
-      data.email,
-      data.notificationDays,
-      data.active ?? true,
-    ];
-    pool.query(query, values, (error) => {
-      if (error) return reject(error);
-      resolve();
-    });
-  });
-}
 
 export const storage = {
   // === USER FUNCTIONS ===
@@ -196,7 +172,7 @@ export const storage = {
 
         const items = (results as DocumentItem[]).map((item) => ({
           ...item,
-          status: calcolaStatus(item.expirationDate, item.notificationDays),
+          status: calcolaStatus(item.expiration_date, item.notification_value),
         }));
 
         resolve(items);
@@ -220,7 +196,7 @@ export const storage = {
   async createDocument(data: Omit<Document, "id">): Promise<Document> {
     return new Promise((resolve, reject) => {
       const query =
-        "INSERT INTO documents (pointNumber, title, revision, emissionDate, filePath, fileType, status, expirationDate, isObsolete, parentId, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO documents (pointNumber, title, revision, emissionDate, filePath, fileType, status, expiration_date, isObsolete, parentId, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       pool.query(
         query,
         [
@@ -231,7 +207,7 @@ export const storage = {
           data.filePath,
           data.fileType,
           data.status,
-          data.expirationDate || null,
+          data.expiration_date || null,
           data.isObsolete || false,
           data.parentId || null,
           data.userId,
@@ -292,33 +268,32 @@ export const storage = {
     });
   },
 
-  async createDocumentItem(item: {
-    documentId: number;
-    title: string;
-    description?: string;
-    expirationDate?: Date | null;
-    notificationDays?: number;
-    status: string;
-  }): Promise<DocumentItem> {
+  async createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem> {
     return new Promise((resolve, reject) => {
       const query = `
-        INSERT INTO document_items (documentId, title, description, expirationDate, notificationDays, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `;
+    INSERT INTO document_items 
+(documentId, title, description, emission_date, validity_value, validity_unit,
+ expiration_date, notification_value, notification_unit, status, file_url, notification_email)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
       const values = [
         item.documentId,
         item.title,
         item.description || null,
-        item.expirationDate || null,
-        item.notificationDays || 0,
+        item.emission_date,
+        item.validity_value,
+        item.validity_unit,
+        item.expiration_date,
+        item.notification_value,
+        item.notification_unit,
         item.status,
+        item.file_url || null,
+        item.notification_email || null,
       ];
+
       pool.query(query, values, (err, results) => {
         if (err) return reject(err);
-        resolve({
-          id: (results as any).insertId,
-          ...item,
-        });
+        resolve({ id: (results as any).insertId, ...item });
       });
     });
   },
@@ -352,11 +327,27 @@ export const storage = {
     data: Partial<DocumentItem>
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
+      // Se i dati di emissione o validità sono presenti, ricalcola la scadenza
+      if (
+        data.emission_date &&
+        data.validity_value !== undefined &&
+        data.validity_unit
+      ) {
+        const base = new Date(data.emission_date);
+        if (data.validity_unit === "months") {
+          base.setMonth(base.getMonth() + data.validity_value);
+        } else {
+          base.setFullYear(base.getFullYear() + data.validity_value);
+        }
+        data.expiration_date = base;
+      }
+
       const fields = Object.keys(data)
         .map((key) => `${key} = ?`)
         .join(", ");
       const values = Object.values(data);
       const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
+
       pool.query(query, [...values, id], (error) => {
         if (error) return reject(error);
         resolve(true);
@@ -384,6 +375,22 @@ export const storage = {
     });
   },
 
+  async getDocumentsWithNotificationEmail(): Promise<DocumentItem[]> {
+    return new Promise((resolve, reject) => {
+      const query = `
+        SELECT * FROM document_items
+        WHERE notification_email IS NOT NULL
+        AND expiration_date IS NOT NULL
+        AND notification_value IS NOT NULL
+        AND notification_unit IS NOT NULL
+      `;
+      pool.query(query, (err, results) => {
+        if (err) return reject(err);
+        resolve(results as DocumentItem[]);
+      });
+    });
+  },
+
   async moveToObsolete(oldPath: string): Promise<string | null> {
     try {
       const obsoleteDir = path.resolve(process.cwd(), "uploads", "obsoleti");
@@ -399,5 +406,5 @@ export const storage = {
       return null;
     }
   },
-  createNotification,
+  
 };

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { ZodError } from "zod";
 import { uploadSingleDoc } from "../middlewares/uploadSingleDoc";
+import { checkExpiringDocumentsAndNotify } from "../jobs/checkExpiringDocumentsAndNotify";
 import { aggregateDocumentStatus } from "@shared/documentUtils";
 import { fromZodError } from "zod-validation-error";
 import {
@@ -52,6 +53,11 @@ router.get("/documents", isAuthenticated, async (req, res) => {
     console.error("Errore nel recupero dei documenti:", error);
     res.status(500).json({ message: "Errore nel recupero dei documenti" });
   }
+});
+
+router.get("/utils/check-expiring", async (req, res) => {
+  await checkExpiringDocumentsAndNotify();
+  res.json({ message: "Controllo completato" });
 });
 
 // POST /documents
@@ -138,32 +144,29 @@ router.get("/documents/:id/items", isAuthenticated, async (req, res) => {
 // POST /documents/:id/items
 router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
   try {
+    console.log("➡️ BODY RICEVUTO:", req.body);
+
     const documentId = parseInt(req.params.id);
     const document = await storage.getDocumentById(documentId);
     if (!document) {
       return res.status(404).json({ message: "Documento non trovato" });
     }
 
-    let processedData = {
+    const parsedValidityValue = parseInt(req.body.validity_value);
+    const parsedNotificationValue = parseInt(req.body.notification_value);
+
+    const cleanData = {
       ...req.body,
+      validity_value: parsedValidityValue,
+      notification_value: parsedNotificationValue,
       documentId,
     };
 
-    if (processedData.expirationDate) {
-      processedData.expirationDate = new Date(processedData.expirationDate);
-    }
+    // ❌ ATTENZIONE: non mettere expiration_date e status qui, li calcola Zod
 
-    if (processedData.notificationDays) {
-      processedData.notificationDays = parseInt(processedData.notificationDays);
-    }
+    const itemData = insertDocumentItemSchema.parse(cleanData);
 
-    if (!processedData.status) {
-      processedData.status = "valid";
-    }
-
-    const itemData = insertDocumentItemSchema.parse(processedData);
     const item = await storage.createDocumentItem(itemData);
-
     res.status(201).json(item);
   } catch (error) {
     if (error instanceof ZodError) {
@@ -173,10 +176,10 @@ router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
       });
     }
 
-    console.error("Error creating document item:", error);
-    res
-      .status(500)
-      .json({ message: "Errore nella creazione dell'elemento del documento" });
+    console.error("❌ Errore nella creazione dell'elemento:", error);
+    res.status(500).json({
+      message: "Errore nella creazione dell'elemento del documento",
+    });
   }
 });
 
@@ -408,7 +411,7 @@ router.post(
             filePath: file.path,
             fileType: fileType as any,
             status: documentStatus.VALID as any,
-            expirationDate: null,
+            expiration_date: null,
             userId, // ← ECCO IL CAMPO MANCANTE
           });
 

@@ -26,17 +26,17 @@ export function inferFileType(file_url?: string | null): string {
  * Check if a file is about to expire based on warning days
  */
 export function isExpiring(
-  expirationDate: string,
+  expiration_date: string,
   warningDays: number
 ): boolean {
-  if (!expirationDate || expirationDate.length !== 8) {
+  if (!expiration_date || expiration_date.length !== 8) {
     return false;
   }
 
   try {
-    const year = parseInt(expirationDate.substring(0, 4));
-    const month = parseInt(expirationDate.substring(4, 6)) - 1; // JS months are 0-indexed
-    const day = parseInt(expirationDate.substring(6, 8));
+    const year = parseInt(expiration_date.substring(0, 4));
+    const month = parseInt(expiration_date.substring(4, 6)) - 1; // JS months are 0-indexed
+    const day = parseInt(expiration_date.substring(6, 8));
 
     const expDate = new Date(year, month, day);
     const today = new Date();
@@ -55,15 +55,15 @@ export function isExpiring(
 /**
  * Check if a file has expired
  */
-export function isExpired(expirationDate: string): boolean {
-  if (!expirationDate || expirationDate.length !== 8) {
+export function isExpired(expiration_date: string): boolean {
+  if (!expiration_date || expiration_date.length !== 8) {
     return false;
   }
 
   try {
-    const year = parseInt(expirationDate.substring(0, 4));
-    const month = parseInt(expirationDate.substring(4, 6)) - 1; // JS months are 0-indexed
-    const day = parseInt(expirationDate.substring(6, 8));
+    const year = parseInt(expiration_date.substring(0, 4));
+    const month = parseInt(expiration_date.substring(4, 6)) - 1; // JS months are 0-indexed
+    const day = parseInt(expiration_date.substring(6, 8));
 
     const expDate = new Date(year, month, day);
     const today = new Date();

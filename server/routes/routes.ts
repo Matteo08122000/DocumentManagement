@@ -59,16 +59,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const email = req.query.email as string;
 
-      let notifications;
+      let items;
+
       if (email) {
-        notifications = await storage.getNotificationsByEmail(email);
+        const query = `
+          SELECT * FROM document_items
+          WHERE notification_email = ?
+        `;
+        items = await new Promise((resolve, reject) => {
+          pool.query(query, [email], (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+          });
+        });
       } else {
-        notifications = await storage.getNotifications();
+        const query = `
+          SELECT * FROM document_items
+          WHERE notification_email IS NOT NULL
+        `;
+        items = await new Promise((resolve, reject) => {
+          pool.query(query, (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+          });
+        });
       }
 
-      res.json(notifications);
+      res.json(items);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error(
+        "Errore nel recupero delle notifiche da document_items:",
+        error
+      );
       res.status(500).json({ message: "Errore nel recupero delle notifiche" });
     }
   });
@@ -76,26 +98,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email notifications - Solo utenti autenticati
   app.post("/api/notifications", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.session.userId; // <<< da sessione
+      const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Non autenticato" });
 
-      const notificationData = insertNotificationSchema.parse(req.body);
+      const {
+        itemId,
+        notification_email,
+        notification_value,
+        notification_unit,
+      } = req.body;
 
-      await storage.createNotification({
-        ...notificationData,
-        userId, // <<< obbligatorio
-      });
-
-      res.status(201).json({ message: "Notifica creata con successo" });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: fromZodError(error).message });
+      if (
+        !itemId ||
+        !notification_email ||
+        !notification_value ||
+        !notification_unit
+      ) {
+        return res.status(400).json({ message: "Dati incompleti" });
       }
 
-      console.error("Error creating notification:", error);
-      res
-        .status(500)
-        .json({ message: "Errore nella creazione della notifica" });
+      const updateOk = await storage.updateDocumentItem(itemId, {
+        notification_email,
+        notification_value,
+        notification_unit,
+      });
+
+      if (!updateOk) throw new Error("Errore aggiornamento notifica");
+
+      res.status(200).json({ message: "Notifica aggiornata" });
+    } catch (err) {
+      console.error("Errore /api/notifications:", err);
+      res.status(500).json({ message: "Errore interno", error: err });
     }
   });
 

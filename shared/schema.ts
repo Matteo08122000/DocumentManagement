@@ -16,14 +16,14 @@ export const users = mysqlTable("users", {
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
-  notificationDays: int("notification_days").default(30),
+  notification_value: int("notification_days").default(30),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   email: true,
-  notificationDays: true,
+  notification_value: true,
 });
 
 // DOCUMENT SCHEMA
@@ -47,7 +47,7 @@ export const documents = mysqlTable("documents", {
   emissionDate: datetime("emission_date").notNull(),
   filePath: varchar("file_path", { length: 1024 }).notNull(),
   fileType: varchar("file_type", { length: 50 }).notNull(),
-  expirationDate: datetime("expiration_date"),
+  expiration_date: datetime("expiration_date"),
   status: varchar("status", { length: 50 }).notNull().default("valid"),
   parentId: int("parent_id"),
   isObsolete: boolean("is_obsolete").default(false),
@@ -66,23 +66,64 @@ export const documentItems = mysqlTable("document_items", {
   documentId: int("document_id").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
-  expirationDate: datetime("expiration_date"),
-  notificationDays: int("notification_days").default(30),
-  status: varchar("status", { length: 50 }).default("valid").notNull(),
-  metadata: json("metadata"),
+  emission_date: datetime("emission_date").notNull().default(new Date()),
+  validity_value: int("validity_value").notNull(),
+  validity_unit: varchar("validity_unit", { length: 10 }).notNull(), // "months" | "years"
+  expiration_date: datetime("expiration_date"),
+  notification_value: int("notification_value").notNull().default(30),
+  notification_unit: varchar("notification_unit", { length: 10 })
+    .notNull()
+    .default("days"), // "days" | "months"
+  status: varchar("status", { length: 50 }).notNull().default("valid"),
   file_url: varchar("file_url", { length: 1024 }),
+  notification_email: varchar("notification_email", { length: 255 }),
 });
+function calculate_expiration_date(
+  emissionDate: Date,
+  validityValue: number,
+  validityUnit: "months" | "years"
+): Date {
+  const result = new Date(emissionDate);
+  if (validityUnit === "months") {
+    result.setMonth(result.getMonth() + validityValue);
+  } else {
+    result.setFullYear(result.getFullYear() + validityValue);
+  }
+  return result;
+}
 
-export const insertDocumentItemSchema = createInsertSchema(documentItems)
-  .omit({
-    id: true,
+export const insertDocumentItemSchema = z
+  .object({
+    documentId: z.number(),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    emission_date: z.preprocess((val) => {
+      if (typeof val === "string" || val instanceof Date) {
+        const parsed = new Date(val);
+        if (!isNaN(parsed.getTime())) return parsed;
+      }
+      return undefined;
+    }, z.date({ required_error: "La data di emissione è obbligatoria" })),
+    validity_value: z.number().min(1),
+    validity_unit: z.enum(["months", "years"]),
+    notification_value: z.number().min(0).default(30),
+    notification_unit: z.enum(["days", "months"]).default("days"),
+    file_url: z.string().optional(),
+    notification_email: z.string().email().optional().nullable(),
   })
-  .transform((data) => ({
-    ...data,
-    // Se expirationDate è una stringa, la convertiamo in un oggetto Date
-    expirationDate: data.expirationDate ? new Date(data.expirationDate) : null,
-  }));
+  .transform((data) => {
+    const expiration_date = calculate_expiration_date(
+      data.emission_date,
+      data.validity_value,
+      data.validity_unit
+    );
 
+    return {
+      ...data,
+      expiration_date,
+      status: "valid", // lo aggiungiamo qui
+    };
+  });
 // EMAIL NOTIFICATION SCHEMA
 export const notifications = mysqlTable("notifications", {
   id: serial("id").primaryKey(),
@@ -92,7 +133,7 @@ export const notifications = mysqlTable("notifications", {
   is_read: boolean("is_read").default(false), // aggiunto
   documentId: int("document_id"),
   documentItemId: int("document_item_id"),
-  notificationDays: int("notification_days").notNull().default(30),
+  notification_value: int("notification_days").notNull().default(30),
   active: boolean("active").default(true),
   createdAt: datetime("created_at").default(new Date()),
 });
@@ -102,11 +143,10 @@ export const insertNotificationSchema = z.object({
   documentItemId: z.number().optional(),
   message: z.string(),
   email: z.string().email(),
-  notificationDays: z.number(),
+  notification_value: z.number(),
   is_read: z.boolean().optional(),
   active: z.boolean().optional(),
 });
-
 
 // EXPORT TYPES
 export type User = typeof users.$inferSelect;

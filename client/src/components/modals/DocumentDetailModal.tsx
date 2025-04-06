@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document, DocumentItem } from "../../../../shared/schema";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { inferFileType, getFileIcon } from "@/lib/file-utils";
 import { z } from "zod";
 import {
@@ -50,6 +57,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
+  const [calculatedexpiration_date, setCalculatedexpiration_date] =
+    useState<Date | null>(null);
 
   const {
     data: items = [],
@@ -84,16 +93,27 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
       z.object({
         title: z.string().min(1, "Il titolo è obbligatorio"),
         description: z.string().optional(),
-        expirationDate: z.date().nullable().optional(),
-        notificationDays: z.number().min(0).default(30),
+        emission_date: z.date(),
+        validity_value: z.number().min(1),
+        validity_unit: z.enum(["months", "years"]),
+        notification_value: z.number().min(0),
+        notification_unit: z.enum(["days", "months"]),
         status: z.string().default("valid"),
+        notification_email: z
+          .string()
+          .email("Email non valida")
+          .optional()
+          .nullable(),
       })
     ),
     defaultValues: {
       title: "",
       description: "",
-      expirationDate: null,
-      notificationDays: 30,
+      emission_date: new Date(),
+      validity_value: 1,
+      validity_unit: "months",
+      notification_value: 30,
+      notification_unit: "days",
       status: "valid",
     },
   });
@@ -110,9 +130,11 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
       const formattedData = {
         ...data,
-        expirationDate: data.expirationDate
-          ? new Date(data.expirationDate).toISOString()
-          : null,
+        emission_date: data.emission_date,
+        validity_value: data.validity_value,
+        validity_unit: data.validity_unit,
+        notification_value: data.notification_value,
+        notification_unit: data.notification_unit,
       };
 
       const response = await fetch(`/api/documents/items/${selectedItem.id}`, {
@@ -152,6 +174,29 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     },
   });
 
+  useEffect(() => {
+    const emissionDate = form.watch("emission_date");
+    const validityValue = form.watch("validity_value");
+    const validityUnit = form.watch("validity_unit");
+
+    if (!emissionDate || !validityValue || !validityUnit) return;
+
+    const base = new Date(emissionDate);
+    const date = new Date(base);
+
+    if (validityUnit === "months") {
+      date.setMonth(date.getMonth() + validityValue);
+    } else {
+      date.setFullYear(date.getFullYear() + validityValue);
+    }
+
+    setCalculatedexpiration_date(date);
+  }, [
+    form.watch("emission_date"),
+    form.watch("validity_value"),
+    form.watch("validity_unit"),
+  ]);
+
   // Display items with status
   const renderItems = () => {
     if (isLoadingItems) return <div>Caricamento elementi...</div>;
@@ -168,9 +213,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
             <div className="mt-2 text-sm">
               <div>
                 Scadenza:{" "}
-                {item.expirationDate ? formatDate(item.expirationDate) : "-"}
+                {item.expiration_date ? formatDate(item.expiration_date) : "-"}
               </div>
-              <div>Preavviso: {item.notificationDays} giorni</div>
+              <div>Preavviso: {item.notification_value} giorni</div>
             </div>
           </div>
         ))}
@@ -194,14 +239,11 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
       console.log("Dati del form:", data);
 
       // Prepara i dati assicurandosi che la data sia in formato ISO string
+      const { expiration_date, ...rest } = data;
       const formattedData = {
-        ...data,
+        ...rest,
         documentId: document.id,
-        // Converti la data di scadenza in formato stringa ISO se presente
-        expirationDate: data.expirationDate
-          ? new Date(data.expirationDate).toISOString()
-          : null,
-        // Inizializza lo status come 'valid'
+        notification_email: data.notification_email || null,
         status: "valid",
       };
 
@@ -257,10 +299,22 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   });
 
   const onSubmit = form.handleSubmit(async (data) => {
+    // 🔧 Fix per emission_date: converto in ISO stringa prima di inviare
+    if (data.emission_date instanceof Date && !isNaN(data.emission_date)) {
+      data.emission_date = data.emission_date.toISOString();
+    } else {
+      toast({
+        title: "Errore",
+        description: "La data di emissione non è valida o mancante.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const createdItem = await addItemMutation.mutateAsync(data);
 
-      // Se c'è un file caricato, inviamo l'upload
+      // ✅ Caricamento file se presente
       if (file && createdItem?.id) {
         const formData = new FormData();
         formData.append("file", file);
@@ -300,7 +354,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
       }
 
       form.reset();
-      setFile(null); // Reset file
+      setFile(null);
       setActiveTab("items");
     } catch (error) {
       toast({
@@ -382,9 +436,6 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
             <TabsContent value="edit-item">
               <form onSubmit={handleEditSubmit} className="space-y-4">
-                {/* Stesso contenuto del form di aggiunta, ma con un bottone diverso */}
-                {/* Riusa tutti i field come in add-item, con i valori già precompilati */}
-                {/* Alla fine, il bottone sarà: */}
                 <Button type="submit" disabled={editItemMutation.isPending}>
                   {editItemMutation.isPending
                     ? "Modifica in corso..."
@@ -452,12 +503,12 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                             {item.description || "-"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {item.expirationDate
-                              ? formatDate(item.expirationDate)
+                            {item.expiration_date
+                              ? formatDate(item.expiration_date)
                               : "-"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
-                            {item.notificationDays}
+                            {item.notification_value}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             <StatusEmoji status={item.status} />
@@ -474,16 +525,38 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                                   item.description || ""
                                 );
                                 form.setValue(
-                                  "notificationDays",
-                                  item.notificationDays || 0
+                                  "notification_value",
+                                  item.notification_value || 0
                                 );
                                 form.setValue(
-                                  "expirationDate",
-                                  item.expirationDate
-                                    ? new Date(item.expirationDate)
+                                  "expiration_date",
+                                  item.expiration_date
+                                    ? new Date(item.expiration_date)
                                     : null
                                 );
                                 form.setValue("status", item.status);
+                                form.setValue(
+                                  "emission_date",
+                                  item.emission_date
+                                    ? new Date(item.emission_date)
+                                    : new Date()
+                                );
+                                form.setValue(
+                                  "validity_value",
+                                  item.validity_value || 1
+                                );
+                                form.setValue(
+                                  "validity_unit",
+                                  item.validity_unit || "months"
+                                );
+                                form.setValue(
+                                  "notification_value",
+                                  item.notification_value || 30
+                                );
+                                form.setValue(
+                                  "notification_unit",
+                                  item.notification_unit || "days"
+                                );
                               }}
                             >
                               Modifica
@@ -494,16 +567,6 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                               onClick={() => handleDeleteItem(item.id)}
                             >
                               Elimina
-                            </button>
-
-                            <button
-                              className="text-primary-600 hover:text-primary-900"
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setIsEmailModalOpen(true);
-                              }}
-                            >
-                              Notifiche
                             </button>
                           </td>
 
@@ -544,62 +607,29 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       className="mt-1"
                       placeholder="Codice evento (es. NC-001)"
                     />
-                    {form.formState.errors.title && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {form.formState.errors.title.message?.toString()}
-                      </p>
-                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="notificationDays">preavviso gg</Label>
-                    <Input
-                      id="notificationDays"
-                      type="number"
-                      {...form.register("notificationDays", {
-                        valueAsNumber: true,
-                      })}
+                    <Label htmlFor="description">Descrizione</Label>
+                    <Textarea
+                      id="description"
+                      {...form.register("description")}
                       className="mt-1"
-                      placeholder="30"
+                      placeholder="Descrizione dell'elemento"
                     />
-                    {form.formState.errors.notificationDays && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {form.formState.errors.notificationDays.message?.toString()}
-                      </p>
-                    )}
                   </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="description">Descrizione</Label>
-                  <Textarea
-                    id="description"
-                    {...form.register("description")}
-                    className="mt-1"
-                    placeholder="Descrizione dell'elemento"
-                    rows={3}
-                  />
-                  {form.formState.errors.description && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {form.formState.errors.description.message?.toString()}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label>Data di Scadenza</Label>
-                  <div className="mt-1">
+                  <div>
+                    <Label>Data di Emissione</Label>
                     <Controller
                       control={form.control}
-                      name="expirationDate"
+                      name="emission_date"
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className={`w-full justify-start text-left font-normal ${
-                                !field.value && "text-muted-foreground"
-                              }`}
+                              className="w-full justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value
@@ -615,44 +645,120 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                               selected={
                                 field.value ? new Date(field.value) : undefined
                               }
-                              onSelect={(date) => {
-                                if (date) {
-                                  // Per evitare problemi di timezone, impostiamo solo la data senza l'ora
-                                  const formattedDate = new Date(date);
-                                  // Converti a UTC per evitare problemi di timezone
-                                  formattedDate.setUTCHours(12, 0, 0, 0);
-                                  field.onChange(formattedDate);
-                                } else {
-                                  field.onChange(null);
-                                }
-                              }}
+                              onSelect={(date) =>
+                                field.onChange(date || new Date())
+                              }
                               initialFocus
                             />
                           </PopoverContent>
                         </Popover>
                       )}
                     />
-                    {form.formState.errors.expirationDate && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {form.formState.errors.expirationDate.message?.toString()}
-                      </p>
-                    )}
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="file">Allega File (PDF, Word, Excel)</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="mt-1"
-                  />
+
+                  <div>
+                    <Label>Validità</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={30}
+                        {...form.register("validity_value", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                      <Select
+                        {...form.register("validity_unit")}
+                        onValueChange={(val) =>
+                          form.setValue(
+                            "validity_unit",
+                            val as "months" | "years"
+                          )
+                        }
+                        defaultValue="months"
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Unità" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="months">Mesi</SelectItem>
+                          <SelectItem value="years">Anni</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Preavviso</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        {...form.register("notification_value", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                      <Select
+                        {...form.register("notification_unit")}
+                        onValueChange={(val) =>
+                          form.setValue(
+                            "notification_unit",
+                            val as "days" | "months"
+                          )
+                        }
+                        defaultValue="days"
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Unità" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="days">Giorni</SelectItem>
+                          <SelectItem value="months">Mesi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Data di Scadenza (calcolata)</Label>
+                    <Input
+                      disabled
+                      value={
+                        calculatedexpiration_date
+                          ? format(calculatedexpiration_date, "PPP", {
+                              locale: it,
+                            })
+                          : "-"
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notification_email">
+                      Email per Notifica
+                    </Label>
+                    <Input
+                      id="notification_email"
+                      type="email"
+                      placeholder="esempio@email.com"
+                      {...form.register("notification_email")}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="file">Allega File</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={addItemMutation.isPending}>
                   {addItemMutation.isPending
-                    ? "Aggiunta in corso..."
+                    ? "Salvataggio..."
                     : "Aggiungi Elemento"}
                 </Button>
               </form>

@@ -13,7 +13,8 @@ import { Document } from "@shared/schema";
 import { FileUpload, AlertCircle, File } from "lucide-react";
 import { parseDocumentName } from "@/lib/document-parser";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface RevisionUploadModalProps {
   isOpen: boolean;
@@ -35,54 +36,67 @@ export default function RevisionUploadModal({
   // Extract current revision number to suggest next
   const currentRevNum = parseInt(document.revision.replace("Rev.", ""));
   const suggestedRevision = `Rev.${currentRevNum + 1}`;
+  const queryClient = useQueryClient();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
 
-    const file = acceptedFiles[0];
-    const result = parseDocumentName(file.name);
+      const file = acceptedFiles[0];
+      const result = parseDocumentName(file.name);
 
-    if (!result.isValid) {
-      toast({
-        title: "Nome file non valido",
-        description: result.error || "Il nome del file non segue il formato richiesto: PointNumber-Title-Rev.Number-YYYYMMDD.extension",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (!result.isValid) {
+        toast({
+          title: "Nome file non valido",
+          description:
+            result.error ||
+            "Il nome del file non segue il formato richiesto: PointNumber-Title-Rev.Number-YYYYMMDD.extension",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Check if point number and title match
-    if (result.pointNumber !== document.pointNumber || result.title !== document.title) {
-      toast({
-        title: "Incongruenza documento",
-        description: "Il punto norma e il titolo del documento devono corrispondere al documento originale.",
-        variant: "destructive",
-      });
-      return;
-    }
+      // Check if point number and title match
+      if (
+        result.pointNumber !== document.pointNumber ||
+        result.title !== document.title
+      ) {
+        toast({
+          title: "Incongruenza documento",
+          description:
+            "Il punto norma e il titolo del documento devono corrispondere al documento originale.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Check if revision is newer
-    const newRevNum = parseInt(result.revision.replace("Rev.", ""));
-    if (newRevNum <= currentRevNum) {
-      toast({
-        title: "Revisione non valida",
-        description: `La nuova revisione deve essere superiore a ${document.revision}.`,
-        variant: "destructive",
-      });
-      return;
-    }
+      // Check if revision is newer
+      const newRevNum = parseInt(result.revision.replace("Rev.", ""));
+      if (newRevNum <= currentRevNum) {
+        toast({
+          title: "Revisione non valida",
+          description: `La nuova revisione deve essere superiore a ${document.revision}.`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    setSelectedFile(file);
-  }, [document, currentRevNum, toast]);
+      setSelectedFile(file);
+    },
+    [document, currentRevNum, toast]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/msword': ['.doc'],
-      'application/pdf': ['.pdf'],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
+      "application/msword": [".doc"],
+      "application/pdf": [".pdf"],
     },
     maxFiles: 1,
   });
@@ -101,24 +115,28 @@ export default function RevisionUploadModal({
 
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append("file", selectedFile);
 
       await apiRequest(
-        'POST', 
-        `/api/documents/${document.id}/update-revision`, 
+        "POST",
+        `/api/documents/${document.id}/update-revision`,
         formData
       );
 
       // Invalidate queries to refresh document list
-      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/documents/obsolete'] });
-      
+      await queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/documents/obsolete"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+
       onUploadComplete();
     } catch (error) {
-      console.error('Error uploading revision:', error);
+      console.error("Error uploading revision:", error);
       toast({
         title: "Errore di caricamento",
-        description: "Si è verificato un errore durante il caricamento della nuova revisione.",
+        description:
+          "Si è verificato un errore durante il caricamento della nuova revisione.",
         variant: "destructive",
       });
     } finally {
@@ -137,7 +155,8 @@ export default function RevisionUploadModal({
             <DialogTitle>Aggiorna Revisione Documento</DialogTitle>
           </div>
           <DialogDescription>
-            Carica una nuova revisione del documento. La versione precedente verrà spostata automaticamente nella cartella "Obsoleti".
+            Carica una nuova revisione del documento. La versione precedente
+            verrà spostata automaticamente nella cartella "Obsoleti".
           </DialogDescription>
         </DialogHeader>
 
@@ -147,7 +166,8 @@ export default function RevisionUploadModal({
               <div className="font-medium">Documento attuale:</div>
               <div className="text-gray-700">{document.fileName}</div>
               <div className="text-xs text-gray-500 mt-1 flex items-center">
-                <AlertCircle className="h-3 w-3 mr-1" /> Nuova revisione suggerita: {suggestedRevision}
+                <AlertCircle className="h-3 w-3 mr-1" /> Nuova revisione
+                suggerita: {suggestedRevision}
               </div>
             </div>
           </div>
@@ -167,7 +187,9 @@ export default function RevisionUploadModal({
                 {selectedFile ? (
                   <div className="flex flex-col items-center">
                     <File className="h-10 w-10 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">{selectedFile.name}</p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {selectedFile.name}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -192,7 +214,10 @@ export default function RevisionUploadModal({
           <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Annulla
           </Button>
-          <Button onClick={handleUpload} disabled={!selectedFile || isUploading}>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || isUploading}
+          >
             {isUploading ? "Caricamento in corso..." : "Carica Revisione"}
           </Button>
         </DialogFooter>

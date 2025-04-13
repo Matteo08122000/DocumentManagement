@@ -24,6 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useAuth } from "@/hooks/use-auth";
 
 // Schema di validazione per il modulo di assistenza
 const supportSchema = z.object({
@@ -40,6 +41,7 @@ type SupportFormData = z.infer<typeof supportSchema>;
 
 const Support: React.FC = () => {
   const { toast } = useToast();
+  const { csrfToken } = useAuth();
 
   // Configurazione del form con react-hook-form
   const form = useForm<SupportFormData>({
@@ -55,10 +57,9 @@ const Support: React.FC = () => {
   // Mutation per l'invio del messaggio di supporto
   const supportMutation = useMutation({
     mutationFn: async (data: SupportFormData) => {
-      // apiRequest già restituisce il JSON processato
-      return await apiRequest("POST", "/api/support", data);
+      return await apiRequest("POST", "/api/support", data, csrfToken);
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Messaggio inviato",
         description:

@@ -2,47 +2,67 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document } from "../../../shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "./use-toast";
+import { invalidateDocumentsCache } from "../lib/queryClient";
 
-export const useDocuments = () => {
+export const useDocuments = (includeObsolete = false) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Get all documents
   const {
     data: documents,
     isLoading,
     error,
     refetch,
   } = useQuery<Document[]>({
-    queryKey: ["/api/documents"],
+    queryKey: ["/api/documents", includeObsolete],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/documents?includeObsolete=${includeObsolete}`
+      );
+      return res;
+    },
+    refetchOnMount: "always",
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Errore imprevisto nel recupero dei documenti";
+
+      toast({
+        title: "Errore",
+        description: message,
+        variant: "destructive",
+      });
+    },
   });
 
-  // Get document by ID
+  // === Singolo documento ===
   const getDocumentById = (id: number) => {
     return useQuery<Document>({
       queryKey: ["/api/documents", id],
+      queryFn: () => apiRequest("GET", `/api/documents/${id}`),
     });
   };
 
-  // Get child documents
+  // === Figli del documento ===
   const getChildDocuments = (parentId: number) => {
     return useQuery<Document[]>({
       queryKey: ["/api/documents", parentId, "children"],
+      queryFn: () => apiRequest("GET", `/api/documents/${parentId}/children`),
     });
   };
 
-  // Mark document as obsolete
+  // === Marca documento come obsoleto ===
   const markObsoleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("PUT", `/api/documents/${id}/obsolete`, {});
-    },
+    mutationFn: async (id: number) =>
+      apiRequest("PUT", `/api/documents/${id}/obsolete`, {}),
     onSuccess: () => {
       toast({
         title: "Documento obsoleto",
         description: "Il documento è stato spostato nella cartella obsoleti",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+      invalidateDocumentsCache(queryClient);
     },
     onError: (error) => {
       toast({
@@ -55,23 +75,16 @@ export const useDocuments = () => {
     },
   });
 
-  // Update document
+  // === Aggiorna documento ===
   const updateDocumentMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: Partial<Document>;
-    }) => {
-      return apiRequest("PUT", `/api/documents/${id}`, data);
-    },
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Document> }) =>
+      apiRequest("PUT", `/api/documents/${id}`, data),
     onSuccess: () => {
       toast({
         title: "Documento aggiornato",
         description: "Le modifiche sono state salvate con successo",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      invalidateDocumentsCache(queryClient);
     },
     onError: (error) => {
       toast({
@@ -84,10 +97,9 @@ export const useDocuments = () => {
     },
   });
 
-  // Refresh documents (used after upload)
+  // === Refresh manuale ===
   const refreshDocuments = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+    invalidateDocumentsCache(queryClient);
     return refetch();
   };
 
@@ -95,6 +107,7 @@ export const useDocuments = () => {
     documents,
     isLoading,
     error,
+    refetch,
     getDocumentById,
     getChildDocuments,
     markObsolete: markObsoleteMutation.mutate,

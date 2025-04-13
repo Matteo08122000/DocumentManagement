@@ -1,11 +1,14 @@
-// storage.ts
+import { fileURLToPath } from "url";
+import path from "path";
+import dotenv from "dotenv";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "./.env") });
 import mysql from "mysql";
 import { calcolaStatus } from "@shared/documentUtils";
-import dotenv from "dotenv";
 import fs from "fs";
-import path from "path";
 import { InsertDocumentItem } from "@shared/schema";
-dotenv.config();
+import { markPreviousObsolete } from "./lib/documentItemUtils";
 
 export type User = {
   id: number;
@@ -35,6 +38,7 @@ export type DocumentItem = {
   id: number;
   documentId: number;
   title: string;
+  revision: number;
   description?: string;
   expiration_date?: Date | null;
   notification_unit?: "days" | "months";
@@ -42,6 +46,7 @@ export type DocumentItem = {
   status: string;
   file_url?: string | null;
   emission_date?: Date;
+  isObsolete: boolean;
   validity_value?: number;
   validity_unit?: "months" | "years";
   notification_email?: string | null;
@@ -92,6 +97,38 @@ export const storage = {
         }
       );
     });
+  },
+
+  saveDocumentItemFile: async ({
+    itemId,
+    filePath,
+    fileType,
+    originalName,
+  }: {
+    itemId: number;
+    filePath: string;
+    fileType: string;
+    originalName: string;
+  }): Promise<string> => {
+    try {
+      const itemDir = path.resolve(
+        process.cwd(),
+        "uploads",
+        "items",
+        String(itemId)
+      );
+
+      fs.mkdirSync(itemDir, { recursive: true });
+
+      const destPath = path.join(itemDir, originalName);
+
+      fs.renameSync(filePath, destPath);
+
+      return `/uploads/items/${itemId}/${originalName}`;
+    } catch (err) {
+      console.error("❌ Errore in saveDocumentItemFile:", err);
+      throw err;
+    }
   },
 
   async createUser(data: {
@@ -164,9 +201,15 @@ export const storage = {
     });
   },
 
-  async getDocumentItems(documentId: number): Promise<DocumentItem[]> {
+  async getDocumentItems(
+    documentId: number,
+    includeObsolete: boolean = false
+  ): Promise<DocumentItem[]> {
     return new Promise((resolve, reject) => {
-      const query = "SELECT * FROM document_items WHERE documentId = ?";
+      const query = includeObsolete
+        ? "SELECT * FROM document_items WHERE documentId = ? AND isObsolete = true"
+        : "SELECT * FROM document_items WHERE documentId = ? AND isObsolete = false";
+
       pool.query(query, [documentId], (error, results) => {
         if (error) return reject(error);
 
@@ -212,26 +255,16 @@ export const storage = {
           data.parentId || null,
           data.userId,
         ],
-        (error, results) => {
+        (error, results: any) => {
           if (error) return reject(error);
-          const newDoc: Document = {
-            id: (results as any).insertId,
-            ...data,
-          };
-          resolve(newDoc);
-        }
-      );
-    });
-  },
 
-  async markDocumentObsolete(id: number): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      pool.query(
-        "UPDATE documents SET isObsolete = true WHERE id = ?",
-        [id],
-        (error) => {
-          if (error) return reject(error);
-          resolve(true);
+          // ✅ FIX: assegna esplicitamente l'id così:
+          const newDoc: Document = {
+            ...data,
+            id: results.insertId, // <--- ESATTAMENTE COSÌ
+          };
+
+          resolve(newDoc);
         }
       );
     });
@@ -270,55 +303,87 @@ export const storage = {
 
   async createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem> {
     return new Promise((resolve, reject) => {
-      const query = `
-    INSERT INTO document_items 
-(documentId, title, description, emission_date, validity_value, validity_unit,
- expiration_date, notification_value, notification_unit, status, file_url, notification_email)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-      const values = [
-        item.documentId,
-        item.title,
-        item.description || null,
-        item.emission_date,
-        item.validity_value,
-        item.validity_unit,
-        item.expiration_date,
-        item.notification_value,
-        item.notification_unit,
-        item.status,
-        item.file_url || null,
-        item.notification_email || null,
-      ];
-
-      pool.query(query, values, (err, results) => {
-        if (err) return reject(err);
-        resolve({ id: (results as any).insertId, ...item });
-      });
-    });
-  },
-
-  async saveDocumentItemFile(file: {
-    itemId: number;
-    filePath: string;
-    fileType: string;
-    originalName: string;
-  }): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO document_item_files (itemId, filePath, fileType, originalName)
-        VALUES (?, ?, ?, ?)
+      const getRevisionsQuery = `
+        SELECT id, revision, file_url FROM document_items
+        WHERE documentId = ? AND title = ? AND isObsolete = false
+        ORDER BY revision DESC
+        LIMIT 1
       `;
-      const values = [
-        file.itemId,
-        file.filePath,
-        file.fileType,
-        file.originalName,
-      ];
-      pool.query(query, values, (error) => {
-        if (error) return reject(error);
-        resolve(true);
-      });
+
+      pool.query(
+        getRevisionsQuery,
+        [item.documentId, item.title],
+        (revErr, results) => {
+          if (revErr) return reject(revErr);
+
+          const latest = results[0] as
+            | { id: number; revision: number; file_url?: string | null }
+            | undefined;
+
+          // Blocco se la revisione NON è più recente
+          if (latest) {
+            if (item.revision < latest.revision) {
+              return reject(
+                new Error("Revisione inferiore a quella esistente")
+              );
+            }
+
+            if (item.revision === latest.revision) {
+              // 🔒 non creare, già esiste stessa revisione
+              return reject(
+                new Error("Revisione già esistente per questo titolo")
+              );
+            }
+          }
+
+          const insertQuery = `
+            INSERT INTO document_items 
+            (documentId, title, revision, description, emission_date, validity_value, validity_unit,
+              expiration_date, notification_value, notification_unit, status, file_url, notification_email, isObsolete)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+
+          const values = [
+            item.documentId,
+            item.title,
+            item.revision,
+            item.description || null,
+            item.emission_date,
+            item.validity_value,
+            item.validity_unit,
+            item.expiration_date,
+            item.notification_value,
+            item.notification_unit,
+            item.status,
+            item.file_url || null,
+            item.notification_email || null,
+            false, // sempre attivo
+          ];
+
+          // Inserisce il nuovo
+          pool.query(insertQuery, values, (insertErr, results) => {
+            if (insertErr) return reject(insertErr);
+
+            const newItem: DocumentItem = {
+              id: (results as any).insertId,
+              ...item,
+              isObsolete: false,
+            };
+
+            // Marca il precedente solo DOPO l’inserimento
+            if (latest) {
+              markPreviousObsolete(
+                latest,
+                reject,
+                () => resolve(newItem),
+                pool
+              );
+            } else {
+              resolve(newItem);
+            }
+          });
+        }
+      );
     });
   },
 
@@ -326,32 +391,49 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     id: number,
     data: Partial<DocumentItem>
   ): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      // Se i dati di emissione o validità sono presenti, ricalcola la scadenza
-      if (
-        data.emission_date &&
-        data.validity_value !== undefined &&
-        data.validity_unit
-      ) {
-        const base = new Date(data.emission_date);
-        if (data.validity_unit === "months") {
-          base.setMonth(base.getMonth() + data.validity_value);
-        } else {
-          base.setFullYear(base.getFullYear() + data.validity_value);
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Revisione? Gestione obsolescenza
+        if (data.revision !== undefined) {
+          const { handleDocumentItemRevisionUpdate } = await import(
+            "./lib/documentItemUtils"
+          );
+          await handleDocumentItemRevisionUpdate(pool, id, data.revision);
         }
-        data.expiration_date = base;
+
+        // Ricalcolo scadenza
+        if (
+          data.emission_date &&
+          data.validity_value !== undefined &&
+          data.validity_unit
+        ) {
+          const base = new Date(data.emission_date);
+          if (data.validity_unit === "months") {
+            base.setMonth(base.getMonth() + data.validity_value);
+          } else {
+            base.setFullYear(base.getFullYear() + data.validity_value);
+          }
+          data.expiration_date = base;
+        }
+
+        // ❗️Fix: evita update senza campi
+        if (Object.keys(data).length === 0) {
+          return reject(new Error("Nessun campo da aggiornare"));
+        }
+
+        const fields = Object.keys(data)
+          .map((key) => `${key} = ?`)
+          .join(", ");
+        const values = Object.values(data);
+        const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
+
+        pool.query(query, [...values, id], (error) => {
+          if (error) return reject(error);
+          resolve(true);
+        });
+      } catch (err) {
+        reject(err);
       }
-
-      const fields = Object.keys(data)
-        .map((key) => `${key} = ?`)
-        .join(", ");
-      const values = Object.values(data);
-      const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
-
-      pool.query(query, [...values, id], (error) => {
-        if (error) return reject(error);
-        resolve(true);
-      });
     });
   },
 
@@ -391,20 +473,109 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     });
   },
 
+  // ✅ Funzione 1: Trova la revisione precedente
+  findPreviousRevision: async ({ pointNumber, title, excludeId }) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+      SELECT * FROM documents
+      WHERE pointNumber = ? AND title = ? AND id != ? AND isObsolete = false
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+      pool.query(query, [pointNumber, title, excludeId], (error, results) => {
+        if (error) return reject(error);
+        resolve(results.length > 0 ? (results[0] as Document) : null);
+      });
+    });
+  },
+
+  // ✅ Funzione 2: Clona i figli da un documento all'altro
+  cloneDocumentItems: async (oldDocId, newDocId) => {
+    return new Promise((resolve, reject) => {
+      const query = `
+      INSERT INTO document_items (
+        documentId, title, description, emission_date,
+        validity_value, validity_unit, expiration_date,
+        notification_value, notification_unit, status, file_url
+      )
+      SELECT ?, title, description, emission_date,
+             validity_value, validity_unit, expiration_date,
+             notification_value, notification_unit, status, file_url
+      FROM document_items
+      WHERE documentId = ?
+    `;
+      pool.query(query, [newDocId, oldDocId], (error) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    });
+  },
+
+  // ✅ Funzione 3: Marca un documento come obsoleto
+  markDocumentObsolete: async (id: number): Promise<boolean> => {
+    return new Promise((resolve, reject) => {
+      pool.query(
+        "UPDATE documents SET isObsolete = true WHERE id = ?",
+        [id],
+        (error, results) => {
+          // 👈 aggiunto results
+          if (error) return reject(error);
+          resolve(results.affectedRows > 0); // 👈 verifica se il documento è stato realmente aggiornato
+        }
+      );
+    });
+  },
+
+  // ✅ Funzione 4: Aggiorna i dati del documento
+  updateDocument: async (
+    id: number,
+    updateData: Partial<Document>
+  ): Promise<boolean> => {
+    return new Promise((resolve, reject) => {
+      const keys = Object.keys(updateData);
+      if (keys.length === 0)
+        return reject(new Error("Nessun campo da aggiornare"));
+
+      const fields = keys.map((key) => `${key} = ?`).join(", ");
+      const values = Object.values(updateData);
+      const query = `UPDATE documents SET ${fields} WHERE id = ?`;
+
+      pool.query(query, [...values, id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
+  },
+
   async moveToObsolete(oldPath: string): Promise<string | null> {
     try {
       const obsoleteDir = path.resolve(process.cwd(), "uploads", "obsoleti");
       fs.mkdirSync(obsoleteDir, { recursive: true });
 
       const fileName = path.basename(oldPath);
-      const newPath = path.join(obsoleteDir, fileName);
+      let newPath = path.join(obsoleteDir, fileName);
 
-      fs.copyFileSync(oldPath, newPath); // <-- cambia da renameSync a copyFileSync
+      // Gestione file duplicato in "obsoleti"
+      let counter = 1;
+      while (fs.existsSync(newPath)) {
+        const { name, ext } = path.parse(fileName);
+        newPath = path.join(obsoleteDir, `${name}_${counter++}${ext}`);
+      }
+
+      // Prova prima con renameSync
+      try {
+        fs.renameSync(oldPath, newPath);
+      } catch (renameErr) {
+        // Fallback con copia + eliminazione
+        console.warn("renameSync fallito, provo con copia:", renameErr);
+        fs.copyFileSync(oldPath, newPath);
+        fs.unlinkSync(oldPath); // elimina il file originale
+      }
+
       return newPath;
     } catch (err) {
       console.error("Errore spostamento in obsoleti:", err);
       return null;
     }
   },
-  
 };

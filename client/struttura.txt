@@ -1,4 +1,5 @@
 
+
 ├── client/
 │   ├── src/
 │   │   ├── components/
@@ -71,10 +72,14 @@
 │   │   │   ├── email-notification-modal.tsx
 │   │   │   ├── revision-upload-modal.tsx
 │   │   │   └── status-summary.tsx
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx
 │   │   ├── hooks/
 │   │   │   ├── use-auth.tsx
 │   │   │   ├── use-mobile.tsx
 │   │   │   ├── use-toast.ts
+│   │   │   ├── useCsrfToken.ts
+│   │   │   ├── useDocumentItems.ts
 │   │   │   ├── useDocuments.ts
 │   │   │   ├── useDocumentUpload.ts
 │   │   │   ├── useIdleTimer.tsx
@@ -104,12 +109,127 @@
 │   ├── .env
 │   ├── index.html
 │   └── struttura.txt
+├── node_modules/
+│   └── .vite/
+│       └── deps/
+│           ├── _metadata.json
+│           ├── @headlessui_react.js
+│           ├── @headlessui_react.js.map
+│           ├── @hookform_resolvers_zod.js
+│           ├── @hookform_resolvers_zod.js.map
+│           ├── @radix-ui_react-dialog.js
+│           ├── @radix-ui_react-dialog.js.map
+│           ├── @radix-ui_react-label.js
+│           ├── @radix-ui_react-label.js.map
+│           ├── @radix-ui_react-popover.js
+│           ├── @radix-ui_react-popover.js.map
+│           ├── @radix-ui_react-progress.js
+│           ├── @radix-ui_react-progress.js.map
+│           ├── @radix-ui_react-select.js
+│           ├── @radix-ui_react-select.js.map
+│           ├── @radix-ui_react-slot.js
+│           ├── @radix-ui_react-slot.js.map
+│           ├── @radix-ui_react-switch.js
+│           ├── @radix-ui_react-switch.js.map
+│           ├── @radix-ui_react-tabs.js
+│           ├── @radix-ui_react-tabs.js.map
+│           ├── @radix-ui_react-toast.js
+│           ├── @radix-ui_react-toast.js.map
+│           ├── @tanstack_react-query.js
+│           ├── @tanstack_react-query.js.map
+│           ├── chunk-2X6A6OHT.js
+│           ├── chunk-2X6A6OHT.js.map
+│           ├── chunk-6KR25S66.js
+│           ├── chunk-6KR25S66.js.map
+│           ├── chunk-A6Q6KIBW.js
+│           ├── chunk-A6Q6KIBW.js.map
+│           ├── chunk-BE75UEYA.js
+│           ├── chunk-BE75UEYA.js.map
+│           ├── chunk-BKYJ7QHF.js
+│           ├── chunk-BKYJ7QHF.js.map
+│           ├── chunk-DW4MCWW2.js
+│           ├── chunk-DW4MCWW2.js.map
+│           ├── chunk-GNC7SI6A.js
+│           ├── chunk-GNC7SI6A.js.map
+│           ├── chunk-GPHW4I6O.js
+│           ├── chunk-GPHW4I6O.js.map
+│           ├── chunk-HCU4ULLG.js
+│           ├── chunk-HCU4ULLG.js.map
+│           ├── chunk-IB5MKDBM.js
+│           ├── chunk-IB5MKDBM.js.map
+│           ├── chunk-KYMU3425.js
+│           ├── chunk-KYMU3425.js.map
+│           ├── chunk-LFT52EJY.js
+│           ├── chunk-LFT52EJY.js.map
+│           ├── chunk-MKYRKYXK.js
+│           ├── chunk-MKYRKYXK.js.map
+│           ├── chunk-OHY7G46N.js
+│           ├── chunk-OHY7G46N.js.map
+│           ├── chunk-OS3QTQ63.js
+│           ├── chunk-OS3QTQ63.js.map
+│           ├── chunk-PMJQPAQU.js
+│           ├── chunk-PMJQPAQU.js.map
+│           ├── chunk-QLG26ATY.js
+│           ├── chunk-QLG26ATY.js.map
+│           ├── chunk-QNHZXI4R.js
+│           ├── chunk-QNHZXI4R.js.map
+│           ├── chunk-SBAA2D7S.js
+│           ├── chunk-SBAA2D7S.js.map
+│           ├── chunk-SF7P4Q6W.js
+│           ├── chunk-SF7P4Q6W.js.map
+│           ├── chunk-TKNOFO23.js
+│           ├── chunk-TKNOFO23.js.map
+│           ├── chunk-TXSD2LYT.js
+│           ├── chunk-TXSD2LYT.js.map
+│           ├── chunk-U3HDD4NL.js
+│           ├── chunk-U3HDD4NL.js.map
+│           ├── chunk-UIV6C5BN.js
+│           ├── chunk-UIV6C5BN.js.map
+│           ├── chunk-WOOG5QLI.js
+│           ├── chunk-WOOG5QLI.js.map
+│           ├── class-variance-authority.js
+│           ├── class-variance-authority.js.map
+│           ├── clsx.js
+│           ├── clsx.js.map
+│           ├── date-fns_locale.js
+│           ├── date-fns_locale.js.map
+│           ├── date-fns.js
+│           ├── date-fns.js.map
+│           ├── lucide-react.js
+│           ├── lucide-react.js.map
+│           ├── package.json
+│           ├── react_jsx-dev-runtime.js
+│           ├── react_jsx-dev-runtime.js.map
+│           ├── react_jsx-runtime.js
+│           ├── react_jsx-runtime.js.map
+│           ├── react-day-picker.js
+│           ├── react-day-picker.js.map
+│           ├── react-dom_client.js
+│           ├── react-dom_client.js.map
+│           ├── react-dom.js
+│           ├── react-dom.js.map
+│           ├── react-dropzone.js
+│           ├── react-dropzone.js.map
+│           ├── react-hook-form.js
+│           ├── react-hook-form.js.map
+│           ├── react-router-dom.js
+│           ├── react-router-dom.js.map
+│           ├── react.js
+│           ├── react.js.map
+│           ├── tailwind-merge.js
+│           ├── tailwind-merge.js.map
+│           ├── wouter.js
+│           ├── wouter.js.map
+│           ├── zod.js
+│           └── zod.js.map
 ├── server/
 │   ├── jobs/
+│   │   ├── checkExpiringDocumentsAndNotify.ts
 │   │   └── notificationJob.ts
 │   ├── lib/
 │   │   └── db.ts
 │   ├── middlewares/
+│   │   ├── security.ts
 │   │   ├── uploadBulk.ts
 │   │   ├── uploadItemFile.ts
 │   │   └── uploadSingleDoc.ts
@@ -120,6 +240,7 @@
 │   ├── utils/
 │   │   ├── getFileType.ts
 │   │   └── parseDocumentName.ts
+│   ├── .env
 │   ├── auth.ts
 │   ├── dbConnection.ts
 │   ├── email.ts
@@ -131,125 +252,35 @@
 │   └── schema.ts
 ├── uploads/
 │   ├── bulk/
-│   │   ├── 1743345147985-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   │   ├── 1743345305084-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 1743345348314-_10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 1743348568403-Cruscotto SGI (1).pdf
-│   │   ├── 1743348648992-10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 1743348732808-10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 1743362952756-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   │   ├── 1743366970180-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 1743444881174-10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 1743505658304-10.2-regitro non conformitÃ -Rev.1-20250319.xlsx
-│   │   ├── 1743505846156-3.2-FileFake-Rev.1-20250401.xlsx
-│   │   ├── 1743505940360-3.2-FileFake-Rev.2-20250401.xlsx
-│   │   ├── 1743506006865-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743603471795-10.2-REGISTRO_NON_CONFORMITA-REV.1-20250324.xlsx
-│   │   ├── 1743603517971-lettera di presentazione.pdf
-│   │   ├── 1743603549118-11.1-Convert_to_pdf-Rev.1-20250322.pdf
-│   │   ├── 1743611496090-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   │   ├── 1743611506559-1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743611803669-1743521190924-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
-│   │   ├── 1743612424481-1743603194040-3.2-FileFake-Rev.3-20250402 (1).xlsx
-│   │   ├── 1743613656656-1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743613662853-1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743613686310-1743603194040-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 1743613732198-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1743614979763-1743613766974-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743615342883-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 1743615357992-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 1743639971026-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743639971032-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1743771370275-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1743771370278-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743771370279-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1743774758627-3.2-FileFake-Rev.3-20250402.docx
-│   │   └── 1743774867749-3.2-FileFake-Rev.3-20250402.docx
+│   │   ├── 1743966989531-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1743966989532-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1743966989532-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744234590848-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1744234590849-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744242368773-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1744278632775-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1744278632779-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   └── 1744278632779-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
 │   ├── items/
-│   │   ├── 1/
-│   │   │   └── 1743291954410-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 10/
-│   │   │   └── 1743442861179-10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 11/
-│   │   │   └── 1743443216378-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   │   ├── 12/
-│   │   │   └── 1743444864568-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   │   ├── 13/
-│   │   │   └── 1743505475483-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
-│   │   ├── 14/
-│   │   │   └── 1743516519690-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 15/
-│   │   │   └── 1743516558007-lettera di presentazione.pdf
-│   │   ├── 16/
-│   │   │   └── 1743518614817-lettera di presentazione.pdf
-│   │   ├── 17/
-│   │   │   └── 1743521100899-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 18/
-│   │   │   └── 1743521190924-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
-│   │   ├── 19/
-│   │   │   └── 1743538630677-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 2/
-│   │   │   └── 1743292369450-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 20/
-│   │   │   └── 1743538737932-3.2-FileFake-Rev.3-20250402.xlsx
-│   │   ├── 21/
-│   │   │   └── 1743539253076-lettera di presentazione.pdf
-│   │   ├── 22/
-│   │   │   └── 1743615442849-10.2-REGISTRO_NON_CONFORMITA-REV.1-20250324.xlsx
-│   │   ├── 23/
-│   │   │   └── 1743615471246-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 24/
-│   │   │   └── 1743771457879-lettera di presentazione.pdf
-│   │   ├── 25/
-│   │   │   └── 1743771539898-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 26/
-│   │   │   └── 1743772082028-lettera di presentazione.pdf
-│   │   ├── 27/
-│   │   │   └── 1743775183486-lettera di presentazione.pdf
-│   │   ├── 28/
-│   │   │   └── 1743775378635-3.2-FileFake-Rev.3-20250402.docx
-│   │   ├── 3/
-│   │   │   └── 1743337880594-_10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 4/
-│   │   │   └── 1743345200624-_10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 5/
-│   │   │   └── 1743365274781-10.1-prova doc-Rev.4-20250325.docx
-│   │   ├── 6/
-│   │   │   └── 1743366999497-10.2-regitro non conformitÃ -Rev.1-20250319.pdf
-│   │   ├── 7/
-│   │   │   └── 1743441933196-10.2-regitro non conformitÃ -Rev.1-20250319 (2).xlsx
-│   │   ├── 8/
-│   │   │   └── 1743442367235-10.2-regitro non conformitÃ -Rev.1-20250319.xlsx
-│   │   └── 9/
-│   │       └── 1743442491810-4.2-SicurezzaAlimentare-Rev.2-20250318.xlsx
-│   ├── obsoleti/
-│   │   ├── 1743290326279-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
-│   │   ├── 1743290326280-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743613732201-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1743613766974-1743613732199-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743615333289-1743521100899-CRUSCOTTO SGI istruzioni d'uso (3).docx
-│   │   ├── 1743615377337-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
-│   │   ├── 1743615396561-CRUSCOTTO SGI istruzioni d'uso.docx
-│   │   ├── 1743639971031-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743771370275-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   └── 1743774758627-3.2-FileFake-Rev.3-20250402.docx
-│   ├── 1743283289876-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   ├── 1743283289877-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
-│   ├── 1743283289877-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   ├── 1743283387292-CRUSCOTTO SGI istruzioni d'uso.docx
-│   ├── 1743283407935-lettera di presentazione.pdf
-│   ├── 1743288802273-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   ├── 1743288802275-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
-│   ├── 1743288802276-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   ├── 1743288831264-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   ├── 1743288831264-4.1-SicurezzaLavoro-Rev.-20250504.xlsx
-│   ├── 1743288831264-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   └── 1743290326277-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-├── .env
+│   │   ├── 50/
+│   │   │   └── 1743967395508-3.2-FileFake-Rev.3-20250402.docx
+│   │   ├── 54/
+│   │   │   └── 1744073547829-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 75/
+│   │   │   └── 1744244368352-lettera di presentazione.pdf
+│   │   ├── 76/
+│   │   │   └── 1744244477550-lettera di presentazione.pdf
+│   │   ├── 77/
+│   │   │   └── file.pdf
+│   │   ├── 78/
+│   │   │   └── lettera di presentazione.pdf
+│   │   └── 79/
+│   │       └── lettera di presentazione.pdf
+│   └── obsoleti/
+│       ├── 1743966989532-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│       ├── 1744234590847-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│       ├── 1744242368774-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│       └── 1744242368775-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
 ├── .gitignore
 ├── check_users.js
 ├── drizzle.config.ts

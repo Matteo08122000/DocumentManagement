@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Document, DocumentItem } from "../../../../shared/schema";
 import {
   Select,
@@ -39,6 +39,9 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CalendarIcon, File } from "lucide-react";
+import { useDocumentItems } from "@/hooks/useDocumentItems";
+import { useAuth } from "@/hooks/use-auth";
+import { getCsrfToken } from "@/lib/getCsrfToken";
 
 interface DocumentDetailModalProps {
   document: Document | null;
@@ -59,39 +62,26 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [calculatedexpiration_date, setCalculatedexpiration_date] =
     useState<Date | null>(null);
+  const { csrfToken } = useAuth();
 
   const {
     data: items = [],
     isLoading: isLoadingItems,
     error: itemsError,
-  } = useQuery<DocumentItem[]>({
-    queryKey: ["/api/documents", document?.id, "items"],
-    enabled: !!document?.id && isOpen,
-    queryFn: async ({ queryKey }) => {
-      // L'endpoint restituisce un array vuoto se il documento non ha elementi
-      const response = await fetch(`/api/documents/${document?.id}/items`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Necessario per inviare i cookie di autenticazione
-      });
+  } = useDocumentItems(document?.id, false, isOpen);
 
-      if (!response.ok) {
-        throw new Error(
-          `Errore nel recupero degli elementi: ${response.statusText}`
-        );
-      }
-
-      console.log("Risposta elementi:", response);
-      return response.json();
-    },
-  });
+  const {
+    data: obsoleteItems = [],
+    isLoading: isLoadingObsoleti,
+    error: obsoleteItemsError,
+  } = useDocumentItems(document?.id, true, isOpen);
 
   // Form setup for adding new items
   const form = useForm<any>({
     resolver: zodResolver(
       z.object({
         title: z.string().min(1, "Il titolo è obbligatorio"),
+        revision: z.number().min(1, "La revisione è obbligatoria"),
         description: z.string().optional(),
         emission_date: z.date(),
         validity_value: z.number().min(1),
@@ -99,6 +89,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         notification_value: z.number().min(0),
         notification_unit: z.enum(["days", "months"]),
         status: z.string().default("valid"),
+        isObsolet: z.boolean().optional(),
         notification_email: z
           .string()
           .email("Email non valida")
@@ -108,6 +99,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     ),
     defaultValues: {
       title: "",
+      revision: 1,
       description: "",
       emission_date: new Date(),
       validity_value: 1,
@@ -119,6 +111,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   });
 
   const handleEditSubmit = form.handleSubmit(async (data) => {
+    console.log("🧾 DATI FORM SUBMIT:", data);
+    console.log("📦 REVISIONE INVIATA:", data.revision, typeof data.revision);
+
     if (!selectedItem?.id) return;
 
     await editItemMutation.mutateAsync(data);
@@ -136,11 +131,13 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         notification_value: data.notification_value,
         notification_unit: data.notification_unit,
       };
+      console.log("🚀 DATI FORMATTATI PER API PUT:", formattedData);
 
       const response = await fetch(`/api/documents/items/${selectedItem.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken || "",
         },
         credentials: "include",
         body: JSON.stringify(formattedData),
@@ -244,6 +241,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         ...rest,
         documentId: document.id,
         notification_email: data.notification_email || null,
+        revision: isNaN(Number(data.revision)) ? 1 : Number(data.revision),
         status: "valid",
       };
 
@@ -252,7 +250,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
       const result = await apiRequest(
         "POST",
         `/api/documents/${document.id}/items`,
-        formattedData
+        formattedData,
+        await getCsrfToken()
       );
       console.log("Risultato aggiunta elemento:", result);
       return result;
@@ -299,6 +298,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   });
 
   const onSubmit = form.handleSubmit(async (data) => {
+    console.log("🧾 DATI FORM SUBMIT:", data);
+
     // 🔧 Fix per emission_date: converto in ISO stringa prima di inviare
     if (data.emission_date instanceof Date && !isNaN(data.emission_date)) {
       data.emission_date = data.emission_date.toISOString();
@@ -323,6 +324,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
           `/api/documents/items/${createdItem.id}/files`,
           {
             method: "POST",
+            headers: {
+              "X-CSRF-Token": csrfToken || "",
+            },
             body: formData,
             credentials: "include",
           }
@@ -378,6 +382,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     try {
       const res = await fetch(`/api/documents/items/${id}`, {
         method: "DELETE",
+        headers: {
+          "X-CSRF-Token": csrfToken || "",
+        },
         credentials: "include",
       });
 
@@ -432,6 +439,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
             <TabsList className="mb-4">
               <TabsTrigger value="items">Elementi Controllati</TabsTrigger>
               <TabsTrigger value="add-item">Aggiungi Elemento</TabsTrigger>
+              <TabsTrigger value="obsoleti">Obsoleti</TabsTrigger>
             </TabsList>
 
             <TabsContent value="edit-item">
@@ -473,6 +481,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                         <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
                           Evento
                         </th>
+                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                          Revisione
+                        </th>
                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                           Descrizione
                         </th>
@@ -500,6 +511,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                             {item.title}
                           </td>
                           <td className="px-3 py-4 text-sm text-gray-500">
+                            {item.revision || "-"}
+                          </td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
                             {item.description || "-"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -520,6 +534,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                                 setSelectedItem(item);
                                 setActiveTab("edit-item");
                                 form.setValue("title", item.title);
+                                form.setValue("revision", item.revision || 1);
+
                                 form.setValue(
                                   "description",
                                   item.description || ""
@@ -572,18 +588,32 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {item.file_url ? (
-                              <a
-                                href={`${import.meta.env.VITE_API_URL}${
-                                  item.file_url
-                                }`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => {
+                                  const url = `${import.meta.env.VITE_API_URL}${
+                                    item.file_url
+                                  }`;
+                                  const ext = item.file_url
+                                    .split(".")
+                                    .pop()
+                                    ?.toLowerCase();
+                                  if (ext === "pdf") {
+                                    window.open(url, "_blank");
+                                  } else {
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = ""; // forza download
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                  }
+                                }}
                                 className="flex items-center justify-center"
                               >
                                 <FileIcon
                                   fileType={inferFileType(item.file_url)}
                                 />
-                              </a>
+                              </button>
                             ) : (
                               "-"
                             )}
@@ -606,6 +636,18 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       {...form.register("title")}
                       className="mt-1"
                       placeholder="Codice evento (es. NC-001)"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="revision">Revisione</Label>
+                    <Input
+                      id="revision"
+                      type="number"
+                      min={1}
+                      {...form.register("revision", { valueAsNumber: true })}
+                      className="mt-1"
+                      placeholder="Es. 1"
                     />
                   </div>
 
@@ -762,6 +804,105 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                     : "Aggiungi Elemento"}
                 </Button>
               </form>
+            </TabsContent>
+            <TabsContent value="obsoleti">
+              {isLoadingObsoleti ? (
+                <div>Caricamento elementi obsoleti...</div>
+              ) : obsoleteItems.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nessun elemento obsoleto per questo documento.
+                </div>
+              ) : (
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="py-3.5 px-4 text-left text-sm font-semibold text-gray-900">
+                          Evento
+                        </th>
+                        <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Revisione
+                        </th>
+                        <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Scadenza
+                        </th>
+                        <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Stato
+                        </th>
+                        <th className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          File
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {obsoleteItems.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-4 text-sm text-gray-900">
+                            {item.title}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500">
+                            {item.revision || "-"}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500">
+                            {item.expiration_date
+                              ? formatDate(item.expiration_date)
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500">
+                            <StatusEmoji status={item.status} />
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500">
+                            {item.file_url ? (
+                              <button
+                                onClick={async () => {
+                                  const url = `${import.meta.env.VITE_API_URL}${
+                                    item.file_url
+                                  }`;
+                                  const ext = item.file_url
+                                    .split(".")
+                                    .pop()
+                                    ?.toLowerCase();
+                                  try {
+                                    const response = await fetch(url);
+                                    if (!response.ok)
+                                      throw new Error(
+                                        "Errore nel recupero del file"
+                                      );
+                                    const blob = await response.blob();
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    if (ext === "pdf") {
+                                      window.open(blobUrl, "_blank");
+                                    } else {
+                                      const a = document.createElement("a");
+                                      a.href = blobUrl;
+                                      a.download = item.title || "documento";
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                    }
+                                  } catch (err) {
+                                    console.error("Errore apertura file:", err);
+                                    alert(
+                                      "Errore durante l'apertura del file."
+                                    );
+                                  }
+                                }}
+                                className="flex items-center justify-center"
+                              >
+                                <FileIcon
+                                  fileType={inferFileType(item.file_url)}
+                                />
+                              </button>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 

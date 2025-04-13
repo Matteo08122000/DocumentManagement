@@ -21,6 +21,7 @@ const Notifications: React.FC = () => {
     error,
   } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
+    queryFn: () => apiRequest<Notification[]>("/api/notifications"),
   });
 
   const updateNotificationMutation = useMutation({

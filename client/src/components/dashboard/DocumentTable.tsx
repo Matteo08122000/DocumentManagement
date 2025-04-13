@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/lib/dateUtils";
 import FileIcon from "@/components/ui/FileIcon";
@@ -7,8 +6,9 @@ import StatusEmoji from "@/components/ui/StatusEmoji";
 import path from "path-browserify";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@shared/schema";
-import { queryClient } from "@/lib/queryClient";
+import { useDocuments } from "@/hooks/useDocuments";
 import DocumentEditModal from "../DocumentEditModal";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DocumentTableProps {
   onViewDocument: (document: Document) => void;
@@ -21,20 +21,14 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const { documents, isLoading, error } = useDocuments(false);
   const itemsPerPage = 10;
-
-  const {
-    data: documents,
-    isLoading,
-    error,
-  } = useQuery<Document[]>({
-    queryKey: ["/api/documents"],
-  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+  const { csrfToken } = useAuth();
 
   const handleEdit = (doc: Document) => {
     setSelectedDoc(doc);
@@ -60,6 +54,10 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
     try {
       const res = await fetch(`/api/documents/${document.id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken || "",
+        },
         credentials: "include",
       });
 

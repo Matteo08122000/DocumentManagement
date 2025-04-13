@@ -12,40 +12,44 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, FolderUp, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
   const { toast } = useToast();
+  const { csrfToken } = useAuth();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showUploadArea, setShowUploadArea] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null
+  );
 
-  // Fetch documents
-  const { data: documents, isLoading, refetch } = useQuery<Document[]>({
-    queryKey: ['/api/documents'],
+  const {
+    data: documents,
+    isLoading,
+    refetch,
+  } = useQuery<Document[]>({
+    queryKey: ["/api/documents"],
+    queryFn: () => apiRequest<Document[]>("GET", "/api/documents"),
   });
 
-  // Fetch document stats
-  const { data: stats } = useQuery<{
-    valid: number;
-    expiring: number;
-    expired: number;
-    obsolete: number;
-  }>({
-    queryKey: ['/api/documents/stats'],
+  const { data: stats } = useQuery({
+    queryKey: ["/api/documents/stats"],
+    queryFn: () => apiRequest("GET", "/api/documents/stats"),
   });
 
-  // Handle refresh index
   const handleRefreshIndex = async () => {
     try {
+      await apiRequest("POST", "/api/refresh-index", undefined, csrfToken);
       await refetch();
       toast({
         title: "Indice aggiornato",
         description: "I documenti sono stati aggiornati con successo.",
       });
     } catch (error) {
-      console.error("Error refreshing documents:", error);
+      console.error("Errore nel refresh index:", error);
       toast({
         title: "Errore",
         description: "Impossibile aggiornare l'indice dei documenti.",
@@ -54,10 +58,8 @@ export default function Home() {
     }
   };
 
-  // Filter documents based on search term
-  const filteredDocuments = documents?.filter(doc => {
+  const filteredDocuments = documents?.filter((doc) => {
     if (!searchTerm) return true;
-    
     const searchLower = searchTerm.toLowerCase();
     return (
       doc.pointNumber.toLowerCase().includes(searchLower) ||
@@ -66,7 +68,6 @@ export default function Home() {
     );
   });
 
-  // Handle document selection for revision update
   const handleDocumentUpdate = (document: Document) => {
     setSelectedDocument(document);
     setShowRevisionModal(true);
@@ -74,28 +75,34 @@ export default function Home() {
 
   return (
     <MainLayout>
-      {/* Dashboard Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Gestionale Documenti</h1>
-        <p className="mt-1 text-sm text-gray-600">Gestisci e monitora i tuoi documenti di qualità e conformità</p>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Gestionale Documenti
+        </h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Gestisci e monitora i tuoi documenti di qualità e conformità
+        </p>
       </div>
 
-      {/* Document Upload Section */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-medium text-gray-900">Caricamento Documenti</h2>
-            <p className="mt-1 text-sm text-gray-500">Carica una nuova cartella o aggiorna documenti esistenti</p>
+            <h2 className="text-lg font-medium text-gray-900">
+              Caricamento Documenti
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Carica una nuova cartella o aggiorna documenti esistenti
+            </p>
           </div>
           <div className="mt-4 md:mt-0 space-y-2 md:space-y-0 md:space-x-2 flex flex-col md:flex-row">
-            <Button 
+            <Button
               onClick={handleRefreshIndex}
               className="inline-flex items-center"
             >
               <RefreshCw className="mr-2 h-4 w-4" /> Aggiorna Indice
             </Button>
-            <Button 
-              onClick={() => setShowUploadArea(true)} 
+            <Button
+              onClick={() => setShowUploadArea(true)}
               variant="secondary"
               className="inline-flex items-center"
             >
@@ -104,9 +111,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Upload Area */}
         {showUploadArea && (
-          <DocumentUpload 
+          <DocumentUpload
             onUploadComplete={() => {
               setShowUploadArea(false);
               refetch();
@@ -116,11 +122,12 @@ export default function Home() {
         )}
       </div>
 
-      {/* Document Dashboard */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
         <div className="px-6 py-5 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-900">Cruscotto Documenti</h2>
+            <h2 className="text-lg font-medium text-gray-900">
+              Cruscotto Documenti
+            </h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -134,18 +141,18 @@ export default function Home() {
           </div>
         </div>
 
-        <DocumentTable 
-          documents={filteredDocuments || []} 
+        <DocumentTable
+          documents={filteredDocuments || []}
           isLoading={isLoading}
-          onViewDocument={(doc) => window.location.href = `/document/${doc.id}`}
+          onViewDocument={(doc) =>
+            (window.location.href = `/document/${doc.id}`)
+          }
           onUpdateDocument={handleDocumentUpdate}
         />
       </div>
 
-      {/* Status Summary */}
       <StatusSummary stats={stats} />
 
-      {/* Email Notification Modal */}
       {showEmailModal && (
         <EmailNotificationModal
           isOpen={showEmailModal}
@@ -153,7 +160,6 @@ export default function Home() {
         />
       )}
 
-      {/* Revision Upload Modal */}
       {showRevisionModal && selectedDocument && (
         <RevisionUploadModal
           isOpen={showRevisionModal}
@@ -168,7 +174,8 @@ export default function Home() {
             refetch();
             toast({
               title: "Revisione aggiornata",
-              description: "La revisione del documento è stata aggiornata con successo.",
+              description:
+                "La revisione del documento è stata aggiornata con successo.",
             });
           }}
         />

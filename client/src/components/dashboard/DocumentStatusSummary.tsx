@@ -1,5 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 type Statistics = {
   valid: number;
@@ -16,6 +17,13 @@ const DocumentStatusSummary: React.FC = () => {
     error,
   } = useQuery<Statistics>({
     queryKey: ["/api/statistics"],
+    queryFn: async () => {
+      const res = await fetch("/api/statistics");
+      if (!res.ok) {
+        throw new Error("Errore nel recupero delle statistiche");
+      }
+      return res.json();
+    },
   });
 
   if (isLoading) {
@@ -105,24 +113,26 @@ const DocumentStatusSummary: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white overflow-hidden shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
-              <span className="material-icons-round text-blue-600">
-                history
-              </span>
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-black-500 truncate cursor-pointer">
-                  Documenti Obsoleti
-                </dt>
-              </dl>
+      <Link to="/obsoleti" className="block no-underline">
+        <div className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition cursor-pointer">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                <span className="material-icons-round text-blue-600">
+                  history
+                </span>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-black-500 truncate">
+                    Documenti Obsoleti
+                  </dt>
+                </dl>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Link>
     </div>
   );
 };

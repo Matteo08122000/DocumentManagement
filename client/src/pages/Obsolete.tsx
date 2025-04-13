@@ -43,7 +43,7 @@ const Obsolete: React.FC = () => {
     isLoading,
     error,
   } = useQuery<Document[]>({
-    queryKey: ["/api/documents"],
+    queryKey: ["/api/documents", true],
     queryFn: async () => {
       const res = await fetch("/api/documents?includeObsolete=true");
       if (!res.ok)
@@ -137,86 +137,121 @@ const Obsolete: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Punto Norma
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Titolo
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Revisione
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Data Emissione
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Tipo
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Azioni
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {obsoleteDocuments.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {doc.pointNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {doc.title}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {doc.revision}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(doc.emissionDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <FileIcon fileType={doc.fileType} />
-                          <span className="text-sm text-gray-900 ml-1">
-                            {doc.fileType.charAt(0).toUpperCase() +
-                              doc.fileType.slice(1)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-primary-600 hover:text-primary-900 mr-3">
-                          <span className="material-icons-round">download</span>
-                        </button>
-                        <button className="text-primary-600 hover:text-primary-900">
-                          <span className="material-icons-round">
-                            visibility
-                          </span>
-                        </button>
-                      </td>
+            <div className="bg-white shadow sm:rounded-lg relative">
+              <div className="w-full overflow-x-auto relative fade-scroll">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Punto Norma
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-[160px] break-words">
+                        Titolo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Revisione
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Data Emissione
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tipo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Azioni
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {obsoleteDocuments.map((doc) => (
+                      <tr key={doc.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {doc.pointNumber}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 break-words max-w-[160px]">
+                          {doc.title}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 text-center">
+                          {doc.revision}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {formatDate(doc.emissionDate)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <FileIcon fileType={doc.fileType} />
+                            <span className="text-sm text-gray-900 ml-1">
+                              {doc.fileType.charAt(0).toUpperCase() +
+                                doc.fileType.slice(1)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                          <button
+                            className="text-primary-600 hover:text-primary-900 mr-3"
+                            onClick={async () => {
+                              if (!doc.filePath) return;
+
+                              const baseUrl =
+                                import.meta.env.VITE_API_URL ||
+                                "http://localhost:5000";
+
+                              // Garantisce che inizi con /uploads
+                              const relativePath = doc.filePath.startsWith("/")
+                                ? doc.filePath
+                                : `/${doc.filePath}`;
+
+                              const fullUrl = `${baseUrl}${relativePath}`;
+                              const ext = fullUrl
+                                .split(".")
+                                .pop()
+                                ?.toLowerCase();
+                              const isPdf = ext === "pdf";
+
+                              try {
+                                const response = await fetch(fullUrl);
+                                if (!response.ok)
+                                  throw new Error(
+                                    "Errore nel recupero del file"
+                                  );
+
+                                const blob = await response.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+
+                                if (isPdf) {
+                                  window.open(
+                                    blobUrl,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                  );
+                                } else {
+                                  const a = document.createElement("a");
+                                  a.href = blobUrl;
+                                  a.download = `${
+                                    doc.title || "documento"
+                                  }.${ext}`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                }
+
+                                URL.revokeObjectURL(blobUrl); // cleanup
+                              } catch (err) {
+                                console.error("Errore apertura file:", err);
+                                alert("Errore durante l'apertura del file.");
+                              }
+                            }}
+                          >
+                            <span className="material-icons-round">
+                              download
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

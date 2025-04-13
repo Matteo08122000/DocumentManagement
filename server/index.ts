@@ -1,19 +1,34 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({
+  path: path.resolve(__dirname, "./.env"),
+});
+
+console.log("✅ ENV:", {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USERNAME,
+  pass: process.env.DB_PASSWORD,
+});
+
 import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import cors from "cors";
 import { createRequire } from "module";
 import "./jobs/notificationJob";
+
 const require = createRequire(import.meta.url);
-import { fileURLToPath } from "url";
-import path from "path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const MySQLStoreFactory = require("express-mysql-session");
 const MySQLStore = MySQLStoreFactory(session);
 
 import { registerRoutes } from "./routes/routes";
 import documentRoutes from "./routes/documentRoutes";
 import { log } from "./vite";
+import { applySecurityMiddleware, authLimiter } from "./middlewares/security";
 
 const app = express();
 
@@ -57,6 +72,13 @@ app.use(
     rolling: true, // Aggiorna il cookie ad ogni richiesta attiva
   })
 );
+
+// ✅ Middleware di sicurezza avanzati (Helmet, CSRF, ecc.)
+applySecurityMiddleware(app);
+
+// ✅ Limita gli accessi bruteforce solo su login/register
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
 
 // ✅ Middleware di log per tutte le route API
 app.use((req, res, next) => {

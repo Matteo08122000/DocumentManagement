@@ -3,16 +3,10 @@ import path from "path";
 import fs from "fs";
 
 // Upload file singolo legato ad un elemento documento
-export const uploadItemFile = multer({
+const uploadItems = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      const itemId = req.params.id;
-      const uploadPath = path.resolve(
-        process.cwd(),
-        "uploads",
-        "items",
-        itemId
-      );
+      const uploadPath = path.resolve("uploads", "items");
       fs.mkdirSync(uploadPath, { recursive: true });
       cb(null, uploadPath);
     },
@@ -32,3 +26,5 @@ export const uploadItemFile = multer({
     cb(null, allowed.includes(file.mimetype));
   },
 });
+
+export default uploadItems;

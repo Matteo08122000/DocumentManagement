@@ -1,17 +1,18 @@
+// src/lib/queryClient.ts
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext"; // importa il context se serve nel client
 
+// ✅ Funzione per lanciare errore se la response non è OK
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorText: string;
     try {
-      // Prova a interpretare la risposta come JSON
       const errorData = await res.json();
       errorText = errorData.error || res.statusText;
-    } catch (e) {
-      // Se non è JSON, usa il testo grezzo o lo statusText
+    } catch {
       try {
         errorText = (await res.text()) || res.statusText;
-      } catch (e2) {
+      } catch {
         errorText = res.statusText;
       }
     }
@@ -19,14 +20,13 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// Funzione di sanitizzazione per prevenire SQL injection
+// ✅ Sanifica l’input per evitare problemi di sicurezza (es. injection)
 function sanitizeInput(data: any): any {
-  if (typeof data === 'string') {
-    // Rimuovi caratteri potenzialmente pericolosi per SQL injection
-    return data.replace(/['";\\]/g, '');
+  if (typeof data === "string") {
+    return data.replace(/['";\\]/g, "");
   } else if (Array.isArray(data)) {
-    return data.map(item => sanitizeInput(item));
-  } else if (data !== null && typeof data === 'object') {
+    return data.map((item) => sanitizeInput(item));
+  } else if (data !== null && typeof data === "object") {
     const sanitized: any = {};
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -38,27 +38,32 @@ function sanitizeInput(data: any): any {
   return data;
 }
 
+// ✅ Funzione generica per qualsiasi fetch: GET, POST, PUT, DELETE
 export async function apiRequest<T = any>(
   method: string,
   url: string,
-  data?: unknown | undefined,
+  data?: unknown,
+  csrfToken?: string
 ): Promise<T> {
-  // Sanitizza i dati di input per prevenire SQL injection
   const sanitizedData = data ? sanitizeInput(data) : undefined;
-  
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  };
+
+  if (csrfToken && ["POST", "PUT", "DELETE"].includes(method.toUpperCase())) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: sanitizedData ? { 
-      "Content-Type": "application/json",
-      // Aggiunge header di sicurezza aggiuntivi
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY" 
-    } : {},
+    headers,
     body: sanitizedData ? JSON.stringify(sanitizedData) : undefined,
     credentials: "include",
   });
 
-  // Verifica se la risposta del server è HTML e non JSON
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("text/html")) {
     throw new Error("Errore del server: risposta HTML anziché JSON.");
@@ -67,58 +72,76 @@ export async function apiRequest<T = any>(
   await throwIfResNotOk(res);
 
   try {
-    return (await res.json()) as T;
+    return await res.json();
   } catch (e) {
-    if (res.status === 204) {
-      return {} as T;
-    }
-    throw new Error(
-      "Risposta non valida: impossibile processare i dati ricevuti",
-    );
+    if (res.status === 204) return {} as T;
+    throw new Error("Risposta non valida: impossibile processare i dati");
   }
 }
 
+// ✅ Funzione di default da usare nei useQuery se non passi una queryFn personalizzata
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
+
+export const getQueryFn = <T>(options: {
   on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+  getCsrfToken: () => string | null;
+}): QueryFunction<T> => {
+  const { on401, getCsrfToken } = options;
+
+  return async ({ queryKey }) => {
+    const url = queryKey[0] as string;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const csrfToken = getCsrfToken();
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+    const res = await fetch(url, {
+      method: "GET",
       credentials: "include",
+      headers,
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (on401 === "returnNull" && res.status === 401) {
+      return null as T;
     }
 
     await throwIfResNotOk(res);
 
-    // Gestiamo il caso in cui la risposta non contenga JSON
     try {
       return await res.json();
     } catch (e) {
-      if (res.status === 204) {
-        // 204 No Content - è una risposta valida ma vuota
-        return {} as T;
-      }
+      if (res.status === 204) return {} as T;
       throw new Error(
-        "Risposta non valida: impossibile processare i dati ricevuti",
+        "Risposta non valida: impossibile processare i dati ricevuti"
       );
     }
   };
+};
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+// ✅ Istanzia il QueryClient con il CSRF token corrente
+export const createQueryClient = (getCsrfToken: () => string | null) => {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        queryFn: getQueryFn({ on401: "throw", getCsrfToken }),
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        staleTime: Infinity,
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
     },
-    mutations: {
-      retry: false,
-    },
-  },
-});
+  });
+};
+
+// ✅ Utility per invalidare la cache di tutti i documenti
+export const invalidateDocumentsCache = (queryClient: QueryClient) => {
+  queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/documents/obsolete"] });
+  queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+};

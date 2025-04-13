@@ -31,6 +31,8 @@ export default function DocumentDetail() {
     error,
   } = useQuery<DocumentWithExpirations>({
     queryKey: [`/api/documents/${documentId}`],
+    queryFn: () =>
+      apiRequest<DocumentWithExpirations>(`/api/documents/${documentId}`),
     enabled: !isNaN(documentId),
   });
 

@@ -50,7 +50,7 @@ export const documents = mysqlTable("documents", {
   expiration_date: datetime("expiration_date"),
   status: varchar("status", { length: 50 }).notNull().default("valid"),
   parentId: int("parent_id"),
-  isObsolete: boolean("is_obsolete").default(false),
+  isObsolete: boolean("isObsolete").default(false),
   createdAt: datetime("created_at").default(new Date()),
 });
 
@@ -63,8 +63,9 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
 // Aggiungi la colonna per il file associato agli elementi
 export const documentItems = mysqlTable("document_items", {
   id: serial("id").primaryKey(),
-  documentId: int("document_id").notNull(),
+  documentId: int("documentId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
+  revision: int("revision").notNull(),
   description: varchar("description", { length: 1000 }),
   emission_date: datetime("emission_date").notNull().default(new Date()),
   validity_value: int("validity_value").notNull(),
@@ -77,6 +78,7 @@ export const documentItems = mysqlTable("document_items", {
   status: varchar("status", { length: 50 }).notNull().default("valid"),
   file_url: varchar("file_url", { length: 1024 }),
   notification_email: varchar("notification_email", { length: 255 }),
+  isObsolete: boolean("isObsolete").notNull().default(false),
 });
 function calculate_expiration_date(
   emissionDate: Date,
@@ -110,6 +112,8 @@ export const insertDocumentItemSchema = z
     notification_unit: z.enum(["days", "months"]).default("days"),
     file_url: z.string().optional(),
     notification_email: z.string().email().optional().nullable(),
+    revision: z.number().min(1, "La revisione è obbligatoria"),
+    isObsolete: z.boolean().optional(),
   })
   .transform((data) => {
     const expiration_date = calculate_expiration_date(
@@ -131,7 +135,7 @@ export const notifications = mysqlTable("notifications", {
   email: varchar("email", { length: 255 }).notNull(),
   message: varchar("message", { length: 1000 }).notNull(), // aggiunto
   is_read: boolean("is_read").default(false), // aggiunto
-  documentId: int("document_id"),
+  documentId: int("documentId"),
   documentItemId: int("document_item_id"),
   notification_value: int("notification_days").notNull().default(30),
   active: boolean("active").default(true),

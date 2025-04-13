@@ -11,3 +11,24 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.fade-scroll::before,
+.fade-scroll::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.fade-scroll::before {
+  left: 0;
+  background: linear-gradient(to right, white, transparent);
+}
+
+.fade-scroll::after {
+  right: 0;
+  background: linear-gradient(to left, white, transparent);
+}

@@ -3,6 +3,7 @@ import { Dialog } from "@headlessui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { csrfToken } = useAuth();
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -35,6 +37,10 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
 
       const res = await fetch(`/api/documents/${document?.id}`, {
         method: "PUT",
+        headers: {
+          "X-CSRF-Token": csrfToken || "",
+        },
+
         credentials: "include",
         body,
       });
@@ -46,11 +52,16 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
       return res.json();
     },
     onSuccess: () => {
+      // ✅ Tutte le invalidazioni necessarie:
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/obsolete"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+
       toast({
         title: "Documento aggiornato",
         description: "Le modifiche sono state salvate correttamente.",
       });
+
       onClose();
     },
     onError: (err: any) => {

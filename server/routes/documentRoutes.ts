@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { ZodError } from "zod";
+import path from "path";
+import { number, ZodError } from "zod";
+import { eq, and, lt } from "drizzle-orm";
 import { uploadSingleDoc } from "../middlewares/uploadSingleDoc";
 import { checkExpiringDocumentsAndNotify } from "../jobs/checkExpiringDocumentsAndNotify";
 import { aggregateDocumentStatus } from "@shared/documentUtils";
@@ -16,8 +18,9 @@ import { parseDocumentName } from "../utils/parseDocumentName";
 import { getFileType } from "../utils/getFileType";
 import { isAuthenticated } from "../auth";
 import { uploadBulkDocuments } from "../middlewares/uploadBulk";
-import { uploadItemFile } from "../middlewares/uploadItemFile";
+import uploadItemFile from "../middlewares/uploadItemFile";
 import { db } from "../lib/db";
+import connectDatabase from "server/dbConnection";
 
 const router = Router();
 
@@ -58,6 +61,20 @@ router.get("/documents", isAuthenticated, async (req, res) => {
 router.get("/utils/check-expiring", async (req, res) => {
   await checkExpiringDocumentsAndNotify();
   res.json({ message: "Controllo completato" });
+});
+
+router.get("/documents/obsolete", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const docs = await storage.getDocuments(userId, true);
+    const obsoleti = docs.filter((d) => d.isObsolete === true);
+    res.json(obsoleti);
+  } catch (err) {
+    console.error("Errore caricamento obsoleti:", err);
+    res
+      .status(500)
+      .json({ message: "Errore nel caricamento dei documenti obsoleti" });
+  }
 });
 
 // POST /documents
@@ -144,27 +161,48 @@ router.get("/documents/:id/items", isAuthenticated, async (req, res) => {
 // POST /documents/:id/items
 router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
   try {
-    console.log("➡️ BODY RICEVUTO:", req.body);
-
     const documentId = parseInt(req.params.id);
     const document = await storage.getDocumentById(documentId);
     if (!document) {
       return res.status(404).json({ message: "Documento non trovato" });
     }
 
+    // Parsiamo i numeri correttamente e in modo sicuro
     const parsedValidityValue = parseInt(req.body.validity_value);
     const parsedNotificationValue = parseInt(req.body.notification_value);
+    const parsedRevision = parseInt(req.body.revision);
+    const revision = isNaN(parsedRevision) ? 1 : parsedRevision;
 
     const cleanData = {
       ...req.body,
-      validity_value: parsedValidityValue,
-      notification_value: parsedNotificationValue,
+      revision,
+      validity_value: isNaN(parsedValidityValue) ? null : parsedValidityValue,
+      notification_value: isNaN(parsedNotificationValue)
+        ? null
+        : parsedNotificationValue,
       documentId,
     };
 
-    // ❌ ATTENZIONE: non mettere expiration_date e status qui, li calcola Zod
-
     const itemData = insertDocumentItemSchema.parse(cleanData);
+
+    // 🔁 MARCA COME OBSOLETI I VECCHI (solo se revisione è un numero valido)
+    if (!isNaN(itemData.revision)) {
+      const hasPrevious = await db.query.documentItems.findFirst({
+        where: and(
+          eq(documentItems.documentId, documentId),
+          eq(documentItems.title, itemData.title),
+          lt(documentItems.revision, itemData.revision),
+          eq(documentItems.isObsolete, false)
+        ),
+      });
+
+      if (hasPrevious) {
+        await db
+          .update(documentItems)
+          .set({ isObsolete: true })
+          .where(eq(documentItems.id, hasPrevious.id));
+      }
+    }
 
     const item = await storage.createDocumentItem(itemData);
     res.status(201).json(item);
@@ -177,15 +215,14 @@ router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
     }
 
     console.error("❌ Errore nella creazione dell'elemento:", error);
-    res.status(500).json({
-      message: "Errore nella creazione dell'elemento del documento",
-    });
+    res
+      .status(500)
+      .json({ message: "Errore nella creazione dell'elemento del documento" });
   }
 });
 
 router.post(
   "/documents/items/:id/files",
-  isAuthenticated,
   uploadItemFile.single("file"),
   async (req, res) => {
     try {
@@ -193,32 +230,30 @@ router.post(
       const file = req.file;
 
       if (!file) {
-        return res.status(400).json({ message: "Nessun file ricevuto" });
+        return res.status(400).json({ message: "File mancante" });
       }
 
-      const fileType = getFileType(file.mimetype);
+      // Costruisci l'URL accessibile dal frontend
+      const relativePath = path.join(
+        "uploads",
+        "items",
+        `${itemId}`,
+        file.filename
+      );
+      const file_url = `/${relativePath.replace(/\\/g, "/")}`; // per Windows
 
-      await storage.saveDocumentItemFile({
-        itemId,
-        filePath: file.path,
-        fileType,
-        originalName: file.originalname,
-      });
-
-      const file_url = `/uploads/items/${itemId}/${file.filename}`;
-
+      // Aggiorna l'item con il file_url
       await db
         .update(documentItems)
         .set({ file_url })
         .where(eq(documentItems.id, itemId));
 
-      res.status(201).json({
-        message: "File allegato con successo",
-        file_url,
-      });
+      res.status(200).json({ message: "File caricato", file_url });
     } catch (error) {
-      console.error("Errore durante l'upload file item:", error);
-      res.status(500).json({ message: "Errore upload file item" });
+      console.error("❌ Errore nell'upload del file:", error);
+      res
+        .status(500)
+        .json({ message: "Errore interno durante l'upload del file" });
     }
   }
 );
@@ -236,13 +271,32 @@ router.put("/documents/:id/obsolete", isAuthenticated, async (req, res) => {
     const newPath = await storage.moveToObsolete(document.filePath);
 
     if (!newPath) {
+      console.error(
+        "Errore nello spostamento file nella cartella obsoleti per documento id:",
+        id
+      );
       return res.status(500).json({
         message: "Errore nello spostamento del file nella cartella obsoleti",
       });
     }
 
-    const updated = await storage.markDocumentObsolete(id);
-    res.json(updated);
+    const success = await storage.markDocumentObsolete(id);
+
+    if (!success) {
+      console.error(
+        "Errore nel marcare il documento come obsoleto con id:",
+        id
+      );
+      return res.status(500).json({
+        message: "Errore nella marcatura del documento come obsoleto",
+      });
+    }
+
+    res.status(200).json({
+      message: "Documento marcato come obsoleto con successo",
+      documentId: id,
+      newPath,
+    });
   } catch (error) {
     console.error("Error marking document as obsolete:", error);
     res
@@ -284,7 +338,11 @@ router.put(
       // Se file nuovo caricato
       if (file) {
         await storage.moveToObsolete(document.filePath);
-        updateData.filePath = file.path;
+        const relativePath = path
+          .relative(path.resolve(""), file.path)
+          .replace(/\\/g, "/");
+        updateData.filePath = `/${relativePath}`;
+
         updateData.fileType = file.mimetype;
       } else if (metadataChanged) {
         // Nessun nuovo file ma metadati modificati
@@ -300,9 +358,60 @@ router.put(
 
       if (pointNumber?.trim()) updateData.pointNumber = pointNumber;
       if (title?.trim()) updateData.title = title;
-      if (revision?.trim()) updateData.revision = revision;
+      const sanitizedRevision = revision?.trim();
+      const isRevisionChanged =
+        sanitizedRevision && sanitizedRevision !== document.revision;
+      if (sanitizedRevision) updateData.revision = sanitizedRevision;
+
       if (emissionDateParsed) updateData.emissionDate = emissionDateParsed;
 
+      // Se la revisione è cambiata, marca il vecchio documento come obsoleto e clona i figli
+
+      let newDocumentId = id;
+
+      if (isRevisionChanged) {
+        await storage.markDocumentObsolete(id);
+        const newDocData = {
+          ...document,
+          ...updateData,
+          id: undefined,
+          parentId: null, // 👈 CAMBIA QUESTO A NULL!
+          isObsolete: false,
+        };
+
+        const newDoc = await storage.createDocument(
+          newDocData as Omit<Document, "id">
+        );
+
+        if (!newDoc?.id) {
+          throw new Error(
+            "Errore critico: ID del nuovo documento non ricevuto"
+          );
+        }
+
+        newDocumentId = newDoc.id;
+
+        // 👉 Qui logghi il nuovo documento
+        console.log("✅ Nuovo documento ID:", newDocumentId);
+
+        const children = await storage.getDocumentItems(id);
+
+        // 👉 Qui logghi quanti figli hai trovato
+        console.log("📄 Figli clonati:", children.length);
+
+        for (const item of children) {
+          const { id, documentId, ...rest } = item;
+          await storage.createDocumentItem({
+            ...rest,
+            documentId: newDoc.id,
+          });
+        }
+
+        return res.status(200).json({
+          message:
+            "Documento aggiornato. Vecchia revisione spostata in obsoleti con figli clonati",
+        });
+      }
       const success = await storage.updateDocument(id, updateData);
       if (!success) throw new Error("Update fallito");
 
@@ -408,7 +517,10 @@ router.post(
             title: parsedName.title,
             revision: parsedName.revision,
             emissionDate: new Date(parsedName.date),
-            filePath: file.path,
+            filePath: path
+              .join("uploads", "bulk", file.filename)
+              .replace(/\\/g, "/"),
+
             fileType: fileType as any,
             status: documentStatus.VALID as any,
             expiration_date: null,

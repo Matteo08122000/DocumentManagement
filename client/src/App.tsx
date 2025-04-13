@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import useIdleTimer from "@/hooks/useIdleTimer";
 
-function AppLayout() {
+export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
 
@@ -53,13 +53,6 @@ function AppLayout() {
                     Dashboard
                   </span>
                 </Link>
-                {isAuthenticated && (
-                  <Link href="/obsoleti">
-                    <span className="text-white hover:bg-blue-800 px-3 py-2 rounded text-sm cursor-pointer block">
-                      Documenti Obsoleti
-                    </span>
-                  </Link>
-                )}
                 <Link href="/chi-siamo">
                   <span className="text-white hover:bg-blue-800 px-3 py-2 rounded text-sm cursor-pointer block">
                     Chi Siamo
@@ -83,7 +76,7 @@ function AppLayout() {
               </Button>
               {isAuthenticated && (
                 <div className="hidden sm:flex items-center space-x-3">
-                  <div className="text-white px-3 py-2 text-sm">
+                  <div className="text-white px-3 py-2 text-sm cursor-pointer">
                     <User className="h-4 w-4 inline mr-1" />
                     {user?.username}
                   </div>
@@ -190,12 +183,10 @@ function AppLayout() {
   );
 }
 
-function MainApp() {
+export function MainApp() {
   return (
     <AuthProvider>
       <AppLayout />
     </AuthProvider>
   );
 }
-
-export default MainApp;

@@ -10,8 +10,9 @@ const { isAuthenticated } = auth;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
-
-  // Rotte di autenticazione
+  app.get("/api/csrf-token", (req, res) => {
+    res.status(200).json({ csrfToken: req.csrfToken() });
+  });
 
   // Rotte di autenticazione standardizzate sotto "/api/auth"
   app.post("/api/auth/register", async (req, res) => {
@@ -159,28 +160,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get document statistics
   app.get("/api/statistics", async (req, res) => {
     try {
-      const documents = await storage.getDocuments();
-
-      // Per le statistiche dei documenti obsoleti, è necessario essere autenticati
-      let obsoleteCount = 0;
-
-      // @ts-ignore - req.session è definito dal middleware express-session
-      if (req.session && req.session.userId) {
-        const obsolete = await storage.getDocuments(true);
-        obsoleteCount = obsolete.filter((doc) => doc.isObsolete).length;
+      // Assicurati che l'utente sia autenticato
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ message: "Utente non autenticato" });
       }
 
-      const valid = documents.filter(
-        (doc) => doc.status === documentStatus.VALID
+      const userId = req.session.userId;
+
+      // Ottieni documenti NON obsoleti per l'utente
+      const documents = await storage.getDocuments(userId, false);
+
+      // Ottieni documenti obsoleti per l'utente
+      const obsoleteDocuments = await storage.getDocuments(userId, true);
+      const obsoleteCount = obsoleteDocuments.filter(
+        (doc) => doc.isObsolete
       ).length;
+
+      const valid = documents.filter((doc) => doc.status === "valid").length;
       const expiring = documents.filter(
-        (doc) => doc.status === documentStatus.EXPIRING
+        (doc) => doc.status === "expiring"
       ).length;
       const expired = documents.filter(
-        (doc) => doc.status === documentStatus.EXPIRED
+        (doc) => doc.status === "expired"
       ).length;
 
       res.json({
@@ -188,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiring,
         expired,
         obsolete: obsoleteCount,
-        total: documents.length,
+        total: documents.length + obsoleteCount, // totale corretto
       });
     } catch (error) {
       console.error("Error getting statistics:", error);

@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Bell } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -35,7 +35,10 @@ interface EmailNotificationModalProps {
   onClose: () => void;
 }
 
-export default function EmailNotificationModal({ isOpen, onClose }: EmailNotificationModalProps) {
+export default function EmailNotificationModal({
+  isOpen,
+  onClose,
+}: EmailNotificationModalProps) {
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
 
@@ -49,27 +52,29 @@ export default function EmailNotificationModal({ isOpen, onClose }: EmailNotific
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsPending(true);
-    
+
     try {
       const data = {
         email: values.email,
         notifications: true,
         onlyCritical: values.notificationType === "critical",
       };
-      
+
       await apiRequest("POST", "/api/notifications/settings", data);
-      
+
       toast({
         title: "Preferenze salvate",
-        description: "Le tue preferenze di notifica sono state salvate con successo.",
+        description:
+          "Le tue preferenze di notifica sono state salvate con successo.",
       });
-      
+
       onClose();
     } catch (error) {
       console.error("Error saving notification settings:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante il salvataggio delle preferenze.",
+        description:
+          "Si è verificato un errore durante il salvataggio delle preferenze.",
         variant: "destructive",
       });
     } finally {
@@ -88,10 +93,12 @@ export default function EmailNotificationModal({ isOpen, onClose }: EmailNotific
             <DialogTitle>Configura Notifiche</DialogTitle>
           </div>
           <DialogDescription>
-            Imposta la tua email per ricevere notifiche prima della scadenza dei documenti. Riceverai un avviso in base ai giorni di preavviso configurati.
+            Imposta la tua email per ricevere notifiche prima della scadenza dei
+            documenti. Riceverai un avviso in base ai giorni di preavviso
+            configurati.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -101,16 +108,13 @@ export default function EmailNotificationModal({ isOpen, onClose }: EmailNotific
                 <FormItem>
                   <FormLabel>Indirizzo Email</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="esempio@azienda.com"
-                      {...field}
-                    />
+                    <Input placeholder="esempio@azienda.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="notificationType"
@@ -145,9 +149,14 @@ export default function EmailNotificationModal({ isOpen, onClose }: EmailNotific
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isPending}
+              >
                 Annulla
               </Button>
               <Button type="submit" disabled={isPending}>

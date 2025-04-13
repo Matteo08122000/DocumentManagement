@@ -1,7 +1,6 @@
 // server/email.ts
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-dotenv.config();
+
 
 // Configura il transporter con le variabili d'ambiente o i parametri del tuo SMTP
 const transporter = nodemailer.createTransport({

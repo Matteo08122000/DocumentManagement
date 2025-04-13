@@ -76,6 +76,10 @@ app.use(
 // ✅ Middleware di sicurezza avanzati (Helmet, CSRF, ecc.)
 applySecurityMiddleware(app);
 
+const uploadsPath = path.resolve(__dirname, "..", "uploads");
+console.log("Serving static files from:", uploadsPath);
+app.use("/uploads", express.static(uploadsPath));
+
 // ✅ Limita gli accessi bruteforce solo su login/register
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);

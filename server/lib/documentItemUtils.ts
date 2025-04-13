@@ -3,6 +3,11 @@
 import fs from "fs";
 import path from "path";
 import { Pool } from "mysql";
+import { fileURLToPath } from "url";
+
+// ✅ Definizione compatibile per ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const markPreviousObsolete = (
   latest: { id: number; file_url?: string | null } | undefined,
@@ -58,7 +63,6 @@ export async function handleDocumentItemRevisionUpdate(
   newRevision: number
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    // 1. Prendi il documento corrente per ottenere titolo e documentId
     const getCurrentQuery = `
       SELECT documentId, title FROM document_items WHERE id = ?
     `;
@@ -69,7 +73,6 @@ export async function handleDocumentItemRevisionUpdate(
 
       const { documentId, title } = results[0];
 
-      // 2. Marca come obsolete tutte le revisioni più vecchie
       const markObsoleteQuery = `
         UPDATE document_items
         SET isObsolete = true
@@ -87,3 +90,36 @@ export async function handleDocumentItemRevisionUpdate(
     });
   });
 }
+
+export const saveDocumentItemFile = async ({
+  itemId,
+  filePath,
+  fileType,
+  originalName,
+}: {
+  itemId: number;
+  filePath: string;
+  fileType: string;
+  originalName: string;
+}): Promise<string> => {
+  try {
+    const itemDir = path.resolve(
+      __dirname,
+      "..",
+      "uploads",
+      "items",
+      String(itemId)
+    );
+
+    fs.mkdirSync(itemDir, { recursive: true });
+
+    const destPath = path.join(itemDir, originalName);
+
+    fs.renameSync(filePath, destPath);
+
+    return `/uploads/items/${itemId}/${originalName}`;
+  } catch (err) {
+    console.error("❌ Errore in saveDocumentItemFile:", err);
+    throw err;
+  }
+};

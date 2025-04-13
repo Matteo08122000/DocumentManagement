@@ -112,7 +112,8 @@ export const storage = {
   }): Promise<string> => {
     try {
       const itemDir = path.resolve(
-        process.cwd(),
+        __dirname,
+        "..",
         "uploads",
         "items",
         String(itemId)

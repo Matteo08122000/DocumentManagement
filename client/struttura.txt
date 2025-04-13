@@ -1,5 +1,4 @@
 
-
 ├── client/
 │   ├── src/
 │   │   ├── components/
@@ -89,6 +88,7 @@
 │   │   │   ├── document-parser.ts
 │   │   │   ├── file-utils.tsx
 │   │   │   ├── fileUtils.ts
+│   │   │   ├── getCsrfToken.ts
 │   │   │   ├── queryClient.ts
 │   │   │   └── utils.ts
 │   │   ├── pages/
@@ -99,7 +99,6 @@
 │   │   │   ├── Login.tsx
 │   │   │   ├── not-found.tsx
 │   │   │   ├── Notifications.tsx
-│   │   │   ├── obsolete-documents.tsx
 │   │   │   ├── Obsolete.tsx
 │   │   │   ├── Register.tsx
 │   │   │   └── Support.tsx
@@ -109,125 +108,13 @@
 │   ├── .env
 │   ├── index.html
 │   └── struttura.txt
-├── node_modules/
-│   └── .vite/
-│       └── deps/
-│           ├── _metadata.json
-│           ├── @headlessui_react.js
-│           ├── @headlessui_react.js.map
-│           ├── @hookform_resolvers_zod.js
-│           ├── @hookform_resolvers_zod.js.map
-│           ├── @radix-ui_react-dialog.js
-│           ├── @radix-ui_react-dialog.js.map
-│           ├── @radix-ui_react-label.js
-│           ├── @radix-ui_react-label.js.map
-│           ├── @radix-ui_react-popover.js
-│           ├── @radix-ui_react-popover.js.map
-│           ├── @radix-ui_react-progress.js
-│           ├── @radix-ui_react-progress.js.map
-│           ├── @radix-ui_react-select.js
-│           ├── @radix-ui_react-select.js.map
-│           ├── @radix-ui_react-slot.js
-│           ├── @radix-ui_react-slot.js.map
-│           ├── @radix-ui_react-switch.js
-│           ├── @radix-ui_react-switch.js.map
-│           ├── @radix-ui_react-tabs.js
-│           ├── @radix-ui_react-tabs.js.map
-│           ├── @radix-ui_react-toast.js
-│           ├── @radix-ui_react-toast.js.map
-│           ├── @tanstack_react-query.js
-│           ├── @tanstack_react-query.js.map
-│           ├── chunk-2X6A6OHT.js
-│           ├── chunk-2X6A6OHT.js.map
-│           ├── chunk-6KR25S66.js
-│           ├── chunk-6KR25S66.js.map
-│           ├── chunk-A6Q6KIBW.js
-│           ├── chunk-A6Q6KIBW.js.map
-│           ├── chunk-BE75UEYA.js
-│           ├── chunk-BE75UEYA.js.map
-│           ├── chunk-BKYJ7QHF.js
-│           ├── chunk-BKYJ7QHF.js.map
-│           ├── chunk-DW4MCWW2.js
-│           ├── chunk-DW4MCWW2.js.map
-│           ├── chunk-GNC7SI6A.js
-│           ├── chunk-GNC7SI6A.js.map
-│           ├── chunk-GPHW4I6O.js
-│           ├── chunk-GPHW4I6O.js.map
-│           ├── chunk-HCU4ULLG.js
-│           ├── chunk-HCU4ULLG.js.map
-│           ├── chunk-IB5MKDBM.js
-│           ├── chunk-IB5MKDBM.js.map
-│           ├── chunk-KYMU3425.js
-│           ├── chunk-KYMU3425.js.map
-│           ├── chunk-LFT52EJY.js
-│           ├── chunk-LFT52EJY.js.map
-│           ├── chunk-MKYRKYXK.js
-│           ├── chunk-MKYRKYXK.js.map
-│           ├── chunk-OHY7G46N.js
-│           ├── chunk-OHY7G46N.js.map
-│           ├── chunk-OS3QTQ63.js
-│           ├── chunk-OS3QTQ63.js.map
-│           ├── chunk-PMJQPAQU.js
-│           ├── chunk-PMJQPAQU.js.map
-│           ├── chunk-QLG26ATY.js
-│           ├── chunk-QLG26ATY.js.map
-│           ├── chunk-QNHZXI4R.js
-│           ├── chunk-QNHZXI4R.js.map
-│           ├── chunk-SBAA2D7S.js
-│           ├── chunk-SBAA2D7S.js.map
-│           ├── chunk-SF7P4Q6W.js
-│           ├── chunk-SF7P4Q6W.js.map
-│           ├── chunk-TKNOFO23.js
-│           ├── chunk-TKNOFO23.js.map
-│           ├── chunk-TXSD2LYT.js
-│           ├── chunk-TXSD2LYT.js.map
-│           ├── chunk-U3HDD4NL.js
-│           ├── chunk-U3HDD4NL.js.map
-│           ├── chunk-UIV6C5BN.js
-│           ├── chunk-UIV6C5BN.js.map
-│           ├── chunk-WOOG5QLI.js
-│           ├── chunk-WOOG5QLI.js.map
-│           ├── class-variance-authority.js
-│           ├── class-variance-authority.js.map
-│           ├── clsx.js
-│           ├── clsx.js.map
-│           ├── date-fns_locale.js
-│           ├── date-fns_locale.js.map
-│           ├── date-fns.js
-│           ├── date-fns.js.map
-│           ├── lucide-react.js
-│           ├── lucide-react.js.map
-│           ├── package.json
-│           ├── react_jsx-dev-runtime.js
-│           ├── react_jsx-dev-runtime.js.map
-│           ├── react_jsx-runtime.js
-│           ├── react_jsx-runtime.js.map
-│           ├── react-day-picker.js
-│           ├── react-day-picker.js.map
-│           ├── react-dom_client.js
-│           ├── react-dom_client.js.map
-│           ├── react-dom.js
-│           ├── react-dom.js.map
-│           ├── react-dropzone.js
-│           ├── react-dropzone.js.map
-│           ├── react-hook-form.js
-│           ├── react-hook-form.js.map
-│           ├── react-router-dom.js
-│           ├── react-router-dom.js.map
-│           ├── react.js
-│           ├── react.js.map
-│           ├── tailwind-merge.js
-│           ├── tailwind-merge.js.map
-│           ├── wouter.js
-│           ├── wouter.js.map
-│           ├── zod.js
-│           └── zod.js.map
 ├── server/
 │   ├── jobs/
 │   │   ├── checkExpiringDocumentsAndNotify.ts
 │   │   └── notificationJob.ts
 │   ├── lib/
-│   │   └── db.ts
+│   │   ├── db.ts
+│   │   └── documentItemUtils.ts
 │   ├── middlewares/
 │   │   ├── security.ts
 │   │   ├── uploadBulk.ts
@@ -252,15 +139,21 @@
 │   └── schema.ts
 ├── uploads/
 │   ├── bulk/
-│   │   ├── 1743966989531-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1743966989532-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1743966989532-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1744234590848-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   ├── 1744234590849-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
-│   │   ├── 1744242368773-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1744278632775-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│   │   ├── 1744278632779-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│   │   └── 1744278632779-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744482072876-lettera di presentazione.pdf
+│   │   ├── 1744482091968-lettera di presentazione.pdf
+│   │   ├── 1744482919406-4.1-SicurezzaLavoro-Rev.2-20250305.xlsx
+│   │   ├── 1744499716357-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1744499716358-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744499740131-lettera di presentazione.pdf
+│   │   ├── 1744502867902-cv matteo dinnocenzo.pdf
+│   │   ├── 1744559207071-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1744559207075-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1744559207077-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744559236663-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   ├── 1744559236664-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│   │   ├── 1744559236664-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│   │   ├── 1744559331739-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
+│   │   └── 1744559331741-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
 │   ├── items/
 │   │   ├── 50/
 │   │   │   └── 1743967395508-3.2-FileFake-Rev.3-20250402.docx
@@ -274,13 +167,39 @@
 │   │   │   └── file.pdf
 │   │   ├── 78/
 │   │   │   └── lettera di presentazione.pdf
-│   │   └── 79/
-│   │       └── lettera di presentazione.pdf
+│   │   ├── 79/
+│   │   │   └── lettera di presentazione.pdf
+│   │   ├── 1744502717708-lettera di presentazione.pdf
+│   │   ├── 1744502749095-lettera di presentazione.pdf
+│   │   ├── 1744502783871-cv matteo dinnocenzo.pdf
+│   │   ├── 1744502825678-lettera di presentazione.pdf
+│   │   ├── 1744502846257-lettera di presentazione.pdf
+│   │   ├── 1744503424121-lettera di presentazione.pdf
+│   │   ├── 1744504124270-cv matteo dinnocenzo.pdf
+│   │   ├── 1744504148606-lettera di presentazione.pdf
+│   │   ├── 1744504231101-lettera di presentazione.pdf
+│   │   ├── 1744505457622-lettera di presentazione.pdf
+│   │   ├── 1744505988794-cv matteo dinnocenzo.pdf
+│   │   ├── 1744546898002-lettera di presentazione.pdf
+│   │   ├── 1744546958110-lettera di presentazione.pdf
+│   │   ├── 1744547367481-lettera di presentazione.pdf
+│   │   ├── 1744547400106-lettera di presentazione.pdf
+│   │   ├── 1744547930238-lettera di presentazione.pdf
+│   │   ├── 1744548644911-lettera di presentazione.pdf
+│   │   ├── 1744551468192-lettera di presentazione.pdf
+│   │   ├── 1744551613875-lettera di presentazione.pdf
+│   │   ├── 1744554083259-lettera di presentazione.pdf
+│   │   ├── 1744554102890-lettera di presentazione.pdf
+│   │   ├── 1744557014775-lettera di presentazione.pdf
+│   │   ├── 1744559353339-lettera di presentazione.pdf
+│   │   ├── 1744559377767-lettera di presentazione.pdf
+│   │   ├── 1744560518798-lettera di presentazione.pdf
+│   │   ├── 1744560551007-lettera di presentazione.pdf
+│   │   ├── 1744561221259-lettera di presentazione.pdf
+│   │   └── 1744561581074-cv matteo dinnocenzo.pdf
 │   └── obsoleti/
-│       ├── 1743966989532-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│       ├── 1744234590847-10.2-Registro non conformitÃ -Rev.1-20250323.xlsx
-│       ├── 1744242368774-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
-│       └── 1744242368775-5.2-GestioneQualitÃ -Rev.1-20250302.xlsx
+│       ├── 1744499716358-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
+│       └── 1744559331740-4.1-SicurezzaLavoro-Rev.2-20250504.xlsx
 ├── .gitignore
 ├── check_users.js
 ├── drizzle.config.ts

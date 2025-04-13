@@ -52,6 +52,18 @@ export function isExpiring(
   }
 }
 
+export const inferLabelFromMime = (filename: string) => {
+  const ext = filename?.split(".").pop()?.toLowerCase();
+  if (!ext) return "Documento";
+
+  if (["xls", "xlsx"].includes(ext)) return "Excel";
+  if (["doc", "docx"].includes(ext)) return "Word";
+  if (ext === "pdf") return "PDF";
+
+  return "Documento";
+};
+
+
 /**
  * Check if a file has expired
  */

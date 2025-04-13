@@ -21,6 +21,8 @@ import { uploadBulkDocuments } from "../middlewares/uploadBulk";
 import uploadItemFile from "../middlewares/uploadItemFile";
 import { db } from "../lib/db";
 import connectDatabase from "server/dbConnection";
+import { saveDocumentItemFile } from "../lib/documentItemUtils";
+import { isRouteErrorResponse } from "react-router-dom";
 
 const router = Router();
 
@@ -61,6 +63,24 @@ router.get("/documents", isAuthenticated, async (req, res) => {
 router.get("/utils/check-expiring", async (req, res) => {
   await checkExpiringDocumentsAndNotify();
   res.json({ message: "Controllo completato" });
+});
+
+router.get("/uploads/items/:itemId/:filename", (req, res) => {
+  const { itemId, filename } = req.params;
+  const filePath = path.join(
+    __dirname,
+    "..",
+    "uploads",
+    "items",
+    itemId,
+    filename
+  );
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("Errore nel servire il file:", err);
+      res.status(404).send("File non trovato");
+    }
+  });
 });
 
 router.get("/documents/obsolete", isAuthenticated, async (req, res) => {
@@ -220,6 +240,33 @@ router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
       .json({ message: "Errore nella creazione dell'elemento del documento" });
   }
 });
+router.get("/documents/items/:id/file", async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+
+    // Ottieni l'item dal DB
+    const [item] = await db
+      .select()
+      .from(documentItems)
+      .where(eq(documentItems.id, itemId));
+
+    if (!item || !item.file_url) {
+      return res.status(404).json({ message: "File non trovato" });
+    }
+
+    const filePath = path.join(process.cwd(), item.file_url.replace(/^\//, ""));
+    // Percorso assoluto
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File mancante nel file system" });
+    }
+
+    // Restituisci il file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error("Errore apertura file item:", error);
+    res.status(500).json({ message: "Errore interno" });
+  }
+});
 
 router.post(
   "/documents/items/:id/files",
@@ -233,16 +280,13 @@ router.post(
         return res.status(400).json({ message: "File mancante" });
       }
 
-      // Costruisci l'URL accessibile dal frontend
-      const relativePath = path.join(
-        "uploads",
-        "items",
-        `${itemId}`,
-        file.filename
-      );
-      const file_url = `/${relativePath.replace(/\\/g, "/")}`; // per Windows
+      const file_url = await saveDocumentItemFile({
+        itemId,
+        filePath: file.path,
+        fileType: file.mimetype,
+        originalName: file.originalname,
+      });
 
-      // Aggiorna l'item con il file_url
       await db
         .update(documentItems)
         .set({ file_url })

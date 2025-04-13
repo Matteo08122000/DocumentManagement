@@ -42,6 +42,7 @@ import { CalendarIcon, File } from "lucide-react";
 import { useDocumentItems } from "@/hooks/useDocumentItems";
 import { useAuth } from "@/hooks/use-auth";
 import { getCsrfToken } from "@/lib/getCsrfToken";
+import { inferLabelFromMime } from "@/lib/file-utils";
 
 interface DocumentDetailModalProps {
   document: Document | null;
@@ -625,34 +626,25 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {item.file_url ? (
-                              <button
-                                onClick={() => {
-                                  const baseUrl = import.meta.env.VITE_API_URL;
-                                  const encodedUrl = `${baseUrl}${encodeURI(
-                                    item.file_url
-                                  )}`;
-                                  const ext = item.file_url
-                                    .split(".")
-                                    .pop()
-                                    ?.toLowerCase();
-
-                                  if (ext === "pdf") {
-                                    window.open(encodedUrl, "_blank");
-                                  } else {
-                                    const a = document.createElement("a");
-                                    a.href = encodedUrl;
-                                    a.download = item.title || "documento";
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                  }
-                                }}
-                                className="flex items-center justify-center"
+                              <a
+                                href={`${
+                                  import.meta.env.VITE_API_URL
+                                }${item.file_url.replace(
+                                  /.*uploads/,
+                                  "/uploads"
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center hover:underline"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <FileIcon
                                   fileType={inferFileType(item.file_url)}
                                 />
-                              </button>
+                                <span className="text-sm text-gray-900 ml-1">
+                                  {inferLabelFromMime(item.file_url)}
+                                </span>
+                              </a>
                             ) : (
                               "-"
                             )}
@@ -892,34 +884,25 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {item.file_url ? (
-                              <button
-                                onClick={() => {
-                                  const baseUrl = import.meta.env.VITE_API_URL;
-                                  const encodedUrl = `${baseUrl}${encodeURI(
-                                    item.file_url
-                                  )}`;
-                                  const ext = item.file_url
-                                    .split(".")
-                                    .pop()
-                                    ?.toLowerCase();
-
-                                  if (ext === "pdf") {
-                                    window.open(encodedUrl, "_blank");
-                                  } else {
-                                    const a = document.createElement("a");
-                                    a.href = encodedUrl;
-                                    a.download = item.title || "documento";
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                  }
-                                }}
-                                className="flex items-center justify-center"
+                              <a
+                                href={`${
+                                  import.meta.env.VITE_API_URL
+                                }${item.file_url.replace(
+                                  /.*uploads/,
+                                  "/uploads"
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center hover:underline"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <FileIcon
                                   fileType={inferFileType(item.file_url)}
                                 />
-                              </button>
+                                <span className="text-sm text-gray-900 ml-1">
+                                  {inferLabelFromMime(item.file_url)}
+                                </span>
+                              </a>
                             ) : (
                               "-"
                             )}

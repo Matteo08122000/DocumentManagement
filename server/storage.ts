@@ -8,7 +8,7 @@ import mysql from "mysql";
 import { calcolaStatus } from "@shared/documentUtils";
 import fs from "fs";
 import { InsertDocumentItem } from "@shared/schema";
-import { markPreviousObsolete } from "./lib/documentItemUtils";
+import { handleDocumentItemRevisionUpdate } from "./lib/documentItemUtils";
 
 export type User = {
   id: number;
@@ -300,42 +300,36 @@ export const storage = {
       });
     });
   },
-
   async createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem> {
     return new Promise((resolve, reject) => {
-      const getRevisionsQuery = `
-        SELECT id, revision, file_url FROM document_items
+      const checkQuery = `
+        SELECT revision FROM document_items
         WHERE documentId = ? AND title = ? AND isObsolete = false
         ORDER BY revision DESC
         LIMIT 1
       `;
 
       pool.query(
-        getRevisionsQuery,
+        checkQuery,
         [item.documentId, item.title],
         (revErr, results) => {
           if (revErr) return reject(revErr);
 
-          const latest = results[0] as
-            | { id: number; revision: number; file_url?: string | null }
-            | undefined;
-
-          // Blocco se la revisione NON è più recente
+          const latest = results[0];
           if (latest) {
             if (item.revision < latest.revision) {
               return reject(
                 new Error("Revisione inferiore a quella esistente")
               );
             }
-
             if (item.revision === latest.revision) {
-              // 🔒 non creare, già esiste stessa revisione
               return reject(
                 new Error("Revisione già esistente per questo titolo")
               );
             }
           }
 
+          // ✅ Se siamo qui, possiamo inserire
           const insertQuery = `
             INSERT INTO document_items 
             (documentId, title, revision, description, emission_date, validity_value, validity_unit,
@@ -357,29 +351,31 @@ export const storage = {
             item.status,
             item.file_url || null,
             item.notification_email || null,
-            false, // sempre attivo
+            false,
           ];
 
-          // Inserisce il nuovo
-          pool.query(insertQuery, values, (insertErr, results) => {
+          pool.query(insertQuery, values, async (insertErr, insertResults) => {
             if (insertErr) return reject(insertErr);
 
             const newItem: DocumentItem = {
-              id: (results as any).insertId,
+              id: (insertResults as any).insertId,
               ...item,
               isObsolete: false,
             };
 
-            // Marca il precedente solo DOPO l’inserimento
-            if (latest) {
-              markPreviousObsolete(
-                latest,
-                reject,
-                () => resolve(newItem),
-                pool
+            try {
+              await handleDocumentItemRevisionUpdate(
+                pool,
+                newItem.id,
+                newItem.revision
               );
-            } else {
               resolve(newItem);
+            } catch (err) {
+              console.error(
+                "❌ Errore durante handleDocumentItemRevisionUpdate:",
+                err
+              );
+              reject(err);
             }
           });
         }
@@ -426,6 +422,14 @@ export const storage = {
           .join(", ");
         const values = Object.values(data);
         const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
+
+        // 👇 LOG VISIBILE SE VIENE CHIAMATO QUALSIASI UPDATE
+        if (fields.includes("isObsolete")) {
+          console.warn("⚠️ QUALCUNO STA MARCANDO OBSOLETO:", {
+            query,
+            values: [...values, id],
+          });
+        }
 
         pool.query(query, [...values, id], (error) => {
           if (error) return reject(error);

@@ -185,25 +185,6 @@ router.post("/documents/:id/items", isAuthenticated, async (req, res) => {
 
     const itemData = insertDocumentItemSchema.parse(cleanData);
 
-    // 🔁 MARCA COME OBSOLETI I VECCHI (solo se revisione è un numero valido)
-    if (!isNaN(itemData.revision)) {
-      const hasPrevious = await db.query.documentItems.findFirst({
-        where: and(
-          eq(documentItems.documentId, documentId),
-          eq(documentItems.title, itemData.title),
-          lt(documentItems.revision, itemData.revision),
-          eq(documentItems.isObsolete, false)
-        ),
-      });
-
-      if (hasPrevious) {
-        await db
-          .update(documentItems)
-          .set({ isObsolete: true })
-          .where(eq(documentItems.id, hasPrevious.id));
-      }
-    }
-
     const item = await storage.createDocumentItem(itemData);
     res.status(201).json(item);
   } catch (error) {

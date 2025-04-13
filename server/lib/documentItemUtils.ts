@@ -15,7 +15,6 @@ export const markPreviousObsolete = (
   const updates: Partial<{ isObsolete: boolean; file_url?: string }> = {};
   updates.isObsolete = true;
 
-  // Se esiste un file_url, prova a spostarlo
   if (latest.file_url) {
     const absolutePath = path.resolve("." + latest.file_url);
     const fileName = path.basename(absolutePath);
@@ -48,6 +47,7 @@ export const markPreviousObsolete = (
   const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
   pool.query(query, [...values, latest.id], (err) => {
     if (err) return reject(err);
+    console.warn("✅ Documento precedente marcato come obsoleto:", latest.id);
     cb();
   });
 };
@@ -58,42 +58,44 @@ export const handleDocumentItemRevisionUpdate = async (
   newRevision: number
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const getQuery = `
+    if (!newRevision || isNaN(newRevision)) {
+      console.warn("⚠️ Revisione non valida, skip update obsolescenza");
+      return resolve();
+    }
+
+    const getCurrentQuery = `
       SELECT id, revision, file_url, documentId, title
       FROM document_items
       WHERE id = ?
     `;
 
-    pool.query(getQuery, [itemId], (err, results) => {
+    pool.query(getCurrentQuery, [itemId], (err, results) => {
       if (err) return reject(err);
       const current = results[0];
       if (!current) return reject("Elemento non trovato");
 
-      const latestQuery = `
-        SELECT id, revision, file_url FROM document_items
-        WHERE documentId = ? AND title = ? AND id != ? AND isObsolete = false
+      const getPreviousQuery = `
+        SELECT id, revision, file_url
+        FROM document_items
+        WHERE documentId = ? AND title = ? AND revision < ? AND id != ? AND isObsolete = false
         ORDER BY revision DESC
         LIMIT 1
       `;
 
       pool.query(
-        latestQuery,
-        [current.documentId, current.title, itemId],
+        getPreviousQuery,
+        [current.documentId, current.title, newRevision, current.id],
         (latestErr, revs) => {
           if (latestErr) return reject(latestErr);
-          const latest = revs[0];
 
-          if (latest && newRevision <= latest.revision) {
-            return reject(
-              new Error(
-                "Revisione non valida: uguale o inferiore alla più recente"
-              )
-            );
+          const previous = revs[0];
+          if (!previous) {
+            console.log("✅ Nessuna revisione precedente da marcare obsoleta");
+            return resolve();
           }
-          console.log("📄 Documento più recente trovato:", latest);
-          console.log("⚠️ Marking obsoleto ID:", latest?.id);
 
-          markPreviousObsolete(latest, reject, resolve, pool);
+          console.log("📄 Documento obsoleto trovato:", previous);
+          markPreviousObsolete(previous, reject, resolve, pool);
         }
       );
     });

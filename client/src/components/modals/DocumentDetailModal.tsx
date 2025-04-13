@@ -89,7 +89,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         notification_value: z.number().min(0),
         notification_unit: z.enum(["days", "months"]),
         status: z.string().default("valid"),
-        isObsolet: z.boolean().optional(),
+        isObsolete: z.boolean().optional(),
         notification_email: z
           .string()
           .email("Email non valida")
@@ -198,24 +198,64 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const renderItems = () => {
     if (isLoadingItems) return <div>Caricamento elementi...</div>;
 
+    const activeItems = items.filter((item) => !item.isObsolete);
+    const obsoleteItems = items.filter((item) => item.isObsolete);
+
     return (
       <div className="space-y-4">
-        {items.map((item) => (
-          <div key={item.id} className="p-4 border rounded-lg">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">{item.title}</h3>
-              <StatusEmoji status={item.status} />
-            </div>
-            <p className="text-sm text-gray-600">{item.description}</p>
-            <div className="mt-2 text-sm">
-              <div>
-                Scadenza:{" "}
-                {item.expiration_date ? formatDate(item.expiration_date) : "-"}
+        {/* Sezione per gli elementi attivi */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">Elementi Attivi</h2>
+          {activeItems.length === 0 ? (
+            <div>Nessun elemento attivo</div>
+          ) : (
+            activeItems.map((item) => (
+              <div key={item.id} className="p-4 border rounded-lg">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">{item.title}</h3>
+                  <StatusEmoji status={item.status} />
+                </div>
+                <p className="text-sm text-gray-600">{item.description}</p>
+                <div className="mt-2 text-sm">
+                  <div>
+                    Scadenza:{" "}
+                    {item.expiration_date
+                      ? formatDate(item.expiration_date)
+                      : "-"}
+                  </div>
+                  <div>Preavviso: {item.notification_value} giorni</div>
+                </div>
               </div>
-              <div>Preavviso: {item.notification_value} giorni</div>
-            </div>
-          </div>
-        ))}
+            ))
+          )}
+        </div>
+
+        {/* Sezione per gli elementi obsoleti */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">Elementi Obsoleti</h2>
+          {obsoleteItems.length === 0 ? (
+            <div>Nessun elemento obsoleto</div>
+          ) : (
+            obsoleteItems.map((item) => (
+              <div key={item.id} className="p-4 border rounded-lg bg-gray-100">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">{item.title}</h3>
+                  <StatusEmoji status={item.status} />
+                </div>
+                <p className="text-sm text-gray-600">{item.description}</p>
+                <div className="mt-2 text-sm">
+                  <div>
+                    Scadenza:{" "}
+                    {item.expiration_date
+                      ? formatDate(item.expiration_date)
+                      : "-"}
+                  </div>
+                  <div>Preavviso: {item.notification_value} giorni</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     );
   };
@@ -505,121 +545,123 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                            {item.title}
-                          </td>
-                          <td className="px-3 py-4 text-sm text-gray-500">
-                            {item.revision || "-"}
-                          </td>
-                          <td className="px-3 py-4 text-sm text-gray-500">
-                            {item.description || "-"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {item.expiration_date
-                              ? formatDate(item.expiration_date)
-                              : "-"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
-                            {item.notification_value}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <StatusEmoji status={item.status} />
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 space-x-2">
-                            <button
-                              className="ml-2 text-blue-600 hover:text-blue-900"
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setActiveTab("edit-item");
-                                form.setValue("title", item.title);
-                                form.setValue("revision", item.revision || 1);
-
-                                form.setValue(
-                                  "description",
-                                  item.description || ""
-                                );
-                                form.setValue(
-                                  "notification_value",
-                                  item.notification_value || 0
-                                );
-                                form.setValue(
-                                  "expiration_date",
-                                  item.expiration_date
-                                    ? new Date(item.expiration_date)
-                                    : null
-                                );
-                                form.setValue("status", item.status);
-                                form.setValue(
-                                  "emission_date",
-                                  item.emission_date
-                                    ? new Date(item.emission_date)
-                                    : new Date()
-                                );
-                                form.setValue(
-                                  "validity_value",
-                                  item.validity_value || 1
-                                );
-                                form.setValue(
-                                  "validity_unit",
-                                  item.validity_unit || "months"
-                                );
-                                form.setValue(
-                                  "notification_value",
-                                  item.notification_value || 30
-                                );
-                                form.setValue(
-                                  "notification_unit",
-                                  item.notification_unit || "days"
-                                );
-                              }}
-                            >
-                              Modifica
-                            </button>
-
-                            <button
-                              className="text-red-600 hover:text-red-900"
-                              onClick={() => handleDeleteItem(item.id)}
-                            >
-                              Elimina
-                            </button>
-                          </td>
-
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            {item.file_url ? (
+                      {items
+                        .filter((item) => !item.isObsolete)
+                        .map((item) => (
+                          <tr key={item.id}>
+                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                              {item.title}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-gray-500">
+                              {item.revision || "-"}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-gray-500">
+                              {item.description || "-"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              {item.expiration_date
+                                ? formatDate(item.expiration_date)
+                                : "-"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                              {item.notification_value}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              <StatusEmoji status={item.status} />
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 space-x-2">
                               <button
+                                className="ml-2 text-blue-600 hover:text-blue-900"
                                 onClick={() => {
-                                  const url = `${import.meta.env.VITE_API_URL}${
-                                    item.file_url
-                                  }`;
-                                  const ext = item.file_url
-                                    .split(".")
-                                    .pop()
-                                    ?.toLowerCase();
-                                  if (ext === "pdf") {
-                                    window.open(url, "_blank");
-                                  } else {
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = ""; // forza download
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                  }
+                                  setSelectedItem(item);
+                                  setActiveTab("edit-item");
+                                  form.setValue("title", item.title);
+                                  form.setValue("revision", item.revision || 1);
+
+                                  form.setValue(
+                                    "description",
+                                    item.description || ""
+                                  );
+                                  form.setValue(
+                                    "notification_value",
+                                    item.notification_value || 0
+                                  );
+                                  form.setValue(
+                                    "expiration_date",
+                                    item.expiration_date
+                                      ? new Date(item.expiration_date)
+                                      : null
+                                  );
+                                  form.setValue("status", item.status);
+                                  form.setValue(
+                                    "emission_date",
+                                    item.emission_date
+                                      ? new Date(item.emission_date)
+                                      : new Date()
+                                  );
+                                  form.setValue(
+                                    "validity_value",
+                                    item.validity_value || 1
+                                  );
+                                  form.setValue(
+                                    "validity_unit",
+                                    item.validity_unit || "months"
+                                  );
+                                  form.setValue(
+                                    "notification_value",
+                                    item.notification_value || 30
+                                  );
+                                  form.setValue(
+                                    "notification_unit",
+                                    item.notification_unit || "days"
+                                  );
                                 }}
-                                className="flex items-center justify-center"
                               >
-                                <FileIcon
-                                  fileType={inferFileType(item.file_url)}
-                                />
+                                Modifica
                               </button>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                onClick={() => handleDeleteItem(item.id)}
+                              >
+                                Elimina
+                              </button>
+                            </td>
+
+                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                              {item.file_url ? (
+                                <button
+                                  onClick={() => {
+                                    const url = `${
+                                      import.meta.env.VITE_API_URL
+                                    }${item.file_url}`;
+                                    const ext = item.file_url
+                                      .split(".")
+                                      .pop()
+                                      ?.toLowerCase();
+                                    if (ext === "pdf") {
+                                      window.open(url, "_blank");
+                                    } else {
+                                      const a = document.createElement("a");
+                                      a.href = url;
+                                      a.download = ""; // forza download
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                    }
+                                  }}
+                                  className="flex items-center justify-center"
+                                >
+                                  <FileIcon
+                                    fileType={inferFileType(item.file_url)}
+                                  />
+                                </button>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

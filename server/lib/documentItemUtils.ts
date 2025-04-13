@@ -52,52 +52,38 @@ export const markPreviousObsolete = (
   });
 };
 
-export const handleDocumentItemRevisionUpdate = async (
+export async function handleDocumentItemRevisionUpdate(
   pool: Pool,
-  itemId: number,
+  currentItemId: number,
   newRevision: number
-): Promise<void> => {
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (!newRevision || isNaN(newRevision)) {
-      console.warn("⚠️ Revisione non valida, skip update obsolescenza");
-      return resolve();
-    }
-
+    // 1. Prendi il documento corrente per ottenere titolo e documentId
     const getCurrentQuery = `
-      SELECT id, revision, file_url, documentId, title
-      FROM document_items
-      WHERE id = ?
+      SELECT documentId, title FROM document_items WHERE id = ?
     `;
 
-    pool.query(getCurrentQuery, [itemId], (err, results) => {
+    pool.query(getCurrentQuery, [currentItemId], (err, results) => {
       if (err) return reject(err);
-      const current = results[0];
-      if (!current) return reject("Elemento non trovato");
+      if (!results.length) return reject(new Error("Documento non trovato"));
 
-      const getPreviousQuery = `
-        SELECT id, revision, file_url
-        FROM document_items
-        WHERE documentId = ? AND title = ? AND revision < ? AND id != ? AND isObsolete = false
-        ORDER BY revision DESC
-        LIMIT 1
+      const { documentId, title } = results[0];
+
+      // 2. Marca come obsolete tutte le revisioni più vecchie
+      const markObsoleteQuery = `
+        UPDATE document_items
+        SET isObsolete = true
+        WHERE documentId = ? AND title = ? AND revision < ? AND id != ?
       `;
 
       pool.query(
-        getPreviousQuery,
-        [current.documentId, current.title, newRevision, current.id],
-        (latestErr, revs) => {
-          if (latestErr) return reject(latestErr);
-
-          const previous = revs[0];
-          if (!previous) {
-            console.log("✅ Nessuna revisione precedente da marcare obsoleta");
-            return resolve();
-          }
-
-          console.log("📄 Documento obsoleto trovato:", previous);
-          markPreviousObsolete(previous, reject, resolve, pool);
+        markObsoleteQuery,
+        [documentId, title, newRevision, currentItemId],
+        (updateErr) => {
+          if (updateErr) return reject(updateErr);
+          resolve();
         }
       );
     });
   });
-};
+}

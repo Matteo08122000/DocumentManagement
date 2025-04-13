@@ -497,17 +497,17 @@ export const storage = {
   cloneDocumentItems: async (oldDocId, newDocId) => {
     return new Promise((resolve, reject) => {
       const query = `
-      INSERT INTO document_items (
-        documentId, title, description, emission_date,
-        validity_value, validity_unit, expiration_date,
-        notification_value, notification_unit, status, file_url
-      )
-      SELECT ?, title, description, emission_date,
-             validity_value, validity_unit, expiration_date,
-             notification_value, notification_unit, status, file_url
-      FROM document_items
-      WHERE documentId = ?
-    `;
+        INSERT INTO document_items (
+          documentId, title, revision, description, emission_date,
+          validity_value, validity_unit, expiration_date,
+          notification_value, notification_unit, status, file_url, isObsolete
+        )
+        SELECT ?, title, revision, description, emission_date,
+               validity_value, validity_unit, expiration_date,
+               notification_value, notification_unit, status, file_url, isObsolete
+        FROM document_items
+        WHERE documentId = ?
+      `;
       pool.query(query, [newDocId, oldDocId], (error) => {
         if (error) return reject(error);
         resolve();

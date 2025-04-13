@@ -198,9 +198,6 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const renderItems = () => {
     if (isLoadingItems) return <div>Caricamento elementi...</div>;
 
-    const activeItems = items.filter((item) => !item.isObsolete);
-    const obsoleteItems = items.filter((item) => item.isObsolete);
-
     return (
       <div className="space-y-4">
         {/* Sezione per gli elementi attivi */}
@@ -545,123 +542,123 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {items
-                        .filter((item) => !item.isObsolete)
-                        .map((item) => (
-                          <tr key={item.id}>
-                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                              {item.title}
-                            </td>
-                            <td className="px-3 py-4 text-sm text-gray-500">
-                              {item.revision || "-"}
-                            </td>
-                            <td className="px-3 py-4 text-sm text-gray-500">
-                              {item.description || "-"}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {item.expiration_date
-                                ? formatDate(item.expiration_date)
-                                : "-"}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
-                              {item.notification_value}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              <StatusEmoji status={item.status} />
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 space-x-2">
+                      {items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                            {item.title}
+                          </td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
+                            {item.revision || "-"}
+                          </td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
+                            {item.description || "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {item.expiration_date
+                              ? formatDate(item.expiration_date)
+                              : "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                            {item.notification_value}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            <StatusEmoji status={item.status} />
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 space-x-2">
+                            <button
+                              className="ml-2 text-blue-600 hover:text-blue-900"
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setActiveTab("edit-item");
+                                form.setValue("title", item.title);
+                                form.setValue("revision", item.revision || 1);
+
+                                form.setValue(
+                                  "description",
+                                  item.description || ""
+                                );
+                                form.setValue(
+                                  "notification_value",
+                                  item.notification_value || 0
+                                );
+                                form.setValue(
+                                  "expiration_date",
+                                  item.expiration_date
+                                    ? new Date(item.expiration_date)
+                                    : null
+                                );
+                                form.setValue("status", item.status);
+                                form.setValue(
+                                  "emission_date",
+                                  item.emission_date
+                                    ? new Date(item.emission_date)
+                                    : new Date()
+                                );
+                                form.setValue(
+                                  "validity_value",
+                                  item.validity_value || 1
+                                );
+                                form.setValue(
+                                  "validity_unit",
+                                  item.validity_unit || "months"
+                                );
+                                form.setValue(
+                                  "notification_value",
+                                  item.notification_value || 30
+                                );
+                                form.setValue(
+                                  "notification_unit",
+                                  item.notification_unit || "days"
+                                );
+                              }}
+                            >
+                              Modifica
+                            </button>
+
+                            <button
+                              className="text-red-600 hover:text-red-900"
+                              onClick={() => handleDeleteItem(item.id)}
+                            >
+                              Elimina
+                            </button>
+                          </td>
+
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {item.file_url ? (
                               <button
-                                className="ml-2 text-blue-600 hover:text-blue-900"
                                 onClick={() => {
-                                  setSelectedItem(item);
-                                  setActiveTab("edit-item");
-                                  form.setValue("title", item.title);
-                                  form.setValue("revision", item.revision || 1);
+                                  const baseUrl = import.meta.env.VITE_API_URL;
+                                  const encodedUrl = `${baseUrl}${encodeURI(
+                                    item.file_url
+                                  )}`;
+                                  const ext = item.file_url
+                                    .split(".")
+                                    .pop()
+                                    ?.toLowerCase();
 
-                                  form.setValue(
-                                    "description",
-                                    item.description || ""
-                                  );
-                                  form.setValue(
-                                    "notification_value",
-                                    item.notification_value || 0
-                                  );
-                                  form.setValue(
-                                    "expiration_date",
-                                    item.expiration_date
-                                      ? new Date(item.expiration_date)
-                                      : null
-                                  );
-                                  form.setValue("status", item.status);
-                                  form.setValue(
-                                    "emission_date",
-                                    item.emission_date
-                                      ? new Date(item.emission_date)
-                                      : new Date()
-                                  );
-                                  form.setValue(
-                                    "validity_value",
-                                    item.validity_value || 1
-                                  );
-                                  form.setValue(
-                                    "validity_unit",
-                                    item.validity_unit || "months"
-                                  );
-                                  form.setValue(
-                                    "notification_value",
-                                    item.notification_value || 30
-                                  );
-                                  form.setValue(
-                                    "notification_unit",
-                                    item.notification_unit || "days"
-                                  );
+                                  if (ext === "pdf") {
+                                    window.open(encodedUrl, "_blank");
+                                  } else {
+                                    const a = document.createElement("a");
+                                    a.href = encodedUrl;
+                                    a.download = item.title || "documento";
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                  }
                                 }}
+                                className="flex items-center justify-center"
                               >
-                                Modifica
+                                <FileIcon
+                                  fileType={inferFileType(item.file_url)}
+                                />
                               </button>
-
-                              <button
-                                className="text-red-600 hover:text-red-900"
-                                onClick={() => handleDeleteItem(item.id)}
-                              >
-                                Elimina
-                              </button>
-                            </td>
-
-                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                              {item.file_url ? (
-                                <button
-                                  onClick={() => {
-                                    const url = `${
-                                      import.meta.env.VITE_API_URL
-                                    }${item.file_url}`;
-                                    const ext = item.file_url
-                                      .split(".")
-                                      .pop()
-                                      ?.toLowerCase();
-                                    if (ext === "pdf") {
-                                      window.open(url, "_blank");
-                                    } else {
-                                      const a = document.createElement("a");
-                                      a.href = url;
-                                      a.download = ""; // forza download
-                                      document.body.appendChild(a);
-                                      a.click();
-                                      document.body.removeChild(a);
-                                    }
-                                  }}
-                                  className="flex items-center justify-center"
-                                >
-                                  <FileIcon
-                                    fileType={inferFileType(item.file_url)}
-                                  />
-                                </button>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -896,37 +893,25 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {item.file_url ? (
                               <button
-                                onClick={async () => {
-                                  const url = `${import.meta.env.VITE_API_URL}${
+                                onClick={() => {
+                                  const baseUrl = import.meta.env.VITE_API_URL;
+                                  const encodedUrl = `${baseUrl}${encodeURI(
                                     item.file_url
-                                  }`;
+                                  )}`;
                                   const ext = item.file_url
                                     .split(".")
                                     .pop()
                                     ?.toLowerCase();
-                                  try {
-                                    const response = await fetch(url);
-                                    if (!response.ok)
-                                      throw new Error(
-                                        "Errore nel recupero del file"
-                                      );
-                                    const blob = await response.blob();
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    if (ext === "pdf") {
-                                      window.open(blobUrl, "_blank");
-                                    } else {
-                                      const a = document.createElement("a");
-                                      a.href = blobUrl;
-                                      a.download = item.title || "documento";
-                                      document.body.appendChild(a);
-                                      a.click();
-                                      document.body.removeChild(a);
-                                    }
-                                  } catch (err) {
-                                    console.error("Errore apertura file:", err);
-                                    alert(
-                                      "Errore durante l'apertura del file."
-                                    );
+
+                                  if (ext === "pdf") {
+                                    window.open(encodedUrl, "_blank");
+                                  } else {
+                                    const a = document.createElement("a");
+                                    a.href = encodedUrl;
+                                    a.download = item.title || "documento";
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
                                   }
                                 }}
                                 className="flex items-center justify-center"

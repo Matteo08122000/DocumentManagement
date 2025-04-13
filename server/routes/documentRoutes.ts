@@ -143,18 +143,37 @@ router.get("/documents/:id/children", isAuthenticated, async (req, res) => {
 router.get("/documents/:id/items", isAuthenticated, async (req, res) => {
   try {
     const documentId = parseInt(req.params.id);
+    if (isNaN(documentId)) {
+      return res.status(400).json({ message: "ID documento non valido" });
+    }
+
     const document = await storage.getDocumentById(documentId);
     if (!document) {
       return res.status(404).json({ message: "Documento non trovato" });
     }
 
-    const items = await storage.getDocumentItems(documentId);
+    // Legge il parametro dalla query
+    const isObsoleteParam = req.query.isObsolete;
+    const isObsolete =
+      isObsoleteParam === "true"
+        ? true
+        : isObsoleteParam === "false"
+        ? false
+        : null;
+
+    if (isObsolete === null) {
+      return res.status(400).json({
+        message: "Parametro isObsolete mancante o non valido (usa true/false)",
+      });
+    }
+
+    const items = await storage.getDocumentItems(documentId, isObsolete);
     res.json(items);
   } catch (error) {
     console.error("Error fetching document items:", error);
-    res
-      .status(500)
-      .json({ message: "Errore nel recupero degli elementi del documento" });
+    res.status(500).json({
+      message: "Errore nel recupero degli elementi del documento",
+    });
   }
 });
 

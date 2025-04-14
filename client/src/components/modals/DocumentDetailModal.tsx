@@ -65,17 +65,14 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     useState<Date | null>(null);
   const { csrfToken } = useAuth();
 
-  const {
-    data: items = [],
-    isLoading: isLoadingItems,
-    error: itemsError,
-  } = useDocumentItems(document?.id, false, isOpen);
+  const { data: validItems = [], isLoading: isLoadingValid } = useDocumentItems(
+    document?.id,
+    false,
+    isOpen
+  );
 
-  const {
-    data: obsoleteItems = [],
-    isLoading: isLoadingObsoleti,
-    error: obsoleteItemsError,
-  } = useDocumentItems(document?.id, true, isOpen);
+  const { data: obsoleteItems = [], isLoading: isLoadingObsolete } =
+    useDocumentItems(document?.id, true, isOpen);
 
   // Form setup for adding new items
   const form = useForm<any>({
@@ -491,13 +488,13 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
             </TabsContent>
 
             <TabsContent value="items">
-              {isLoadingItems ? (
+              {isLoadingValid ? (
                 <div className="animate-pulse space-y-4">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="h-12 bg-gray-200 rounded"></div>
                   ))}
                 </div>
-              ) : items.length === 0 ? (
+              ) : validItems.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <p>Nessun elemento controllato per questo documento.</p>
                   <Button
@@ -543,7 +540,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {items.map((item) => (
+                      {validItems.map((item) => (
                         <tr key={item.id}>
                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                             {item.title}
@@ -611,6 +608,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                                   "notification_unit",
                                   item.notification_unit || "days"
                                 );
+                                form.setValue("file_url", item.file_url || "");
                               }}
                             >
                               Modifica
@@ -627,12 +625,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                             {item.file_url ? (
                               <a
-                                href={`${
-                                  import.meta.env.VITE_API_URL
-                                }${item.file_url.replace(
-                                  /.*uploads/,
-                                  "/uploads"
-                                )}`}
+                                href={`${import.meta.env.VITE_API_URL}${
+                                  item.file_url
+                                }`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center hover:underline"
@@ -819,13 +814,41 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                   </div>
 
                   <div>
-                    <Label htmlFor="file">Allega File</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    />
+                    {/* File già caricato */}
+                    {form.watch("file_url") && !form.watch("file") && (
+                      <div className="text-sm text-green-600 flex items-center gap-2">
+                        <span className="material-icons-round text-green-600 text-base">
+                          check_circle
+                        </span>
+                        <a
+                          href={`${import.meta.env.VITE_API_URL}${form.watch(
+                            "file_url"
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          File già caricato
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Upload nuovo file */}
+                    <div>
+                      <Label htmlFor="edit-file">Sostituisci File</Label>
+                      <Input
+                        id="edit-file"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx"
+                        onChange={(e) => {
+                          const selected = e.target.files?.[0] || null;
+                          setFile(selected);
+                          if (selected) {
+                            form.setValue("file_url", ""); // reset se l'utente carica un nuovo file
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -837,7 +860,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
               </form>
             </TabsContent>
             <TabsContent value="obsoleti">
-              {isLoadingObsoleti ? (
+              {isLoadingObsolete ? (
                 <div>Caricamento elementi obsoleti...</div>
               ) : obsoleteItems.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -885,12 +908,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {item.file_url ? (
                               <a
-                                href={`${
-                                  import.meta.env.VITE_API_URL
-                                }${item.file_url.replace(
-                                  /.*uploads/,
-                                  "/uploads"
-                                )}`}
+                                href={`${import.meta.env.VITE_API_URL}${
+                                  item.file_url
+                                }`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center hover:underline"

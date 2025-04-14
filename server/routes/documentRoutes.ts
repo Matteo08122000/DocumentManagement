@@ -273,18 +273,26 @@ router.post(
   uploadItemFile.single("file"),
   async (req, res) => {
     try {
-      const itemId = parseInt(req.params.id);
+      const itemId = Number(req.params.id);
+
+      if (isNaN(itemId)) {
+        return res.status(400).json({ message: "ID documento non valido" });
+      }
+
       const file = req.file;
 
       if (!file) {
         return res.status(400).json({ message: "File mancante" });
       }
 
+      // 🔄 Sovrascrivi originalName con filename generato (es. timestamp + nome originale)
+      const uniqueName = `${Date.now()}-${file.originalname}`;
+
       const file_url = await saveDocumentItemFile({
         itemId,
         filePath: file.path,
         fileType: file.mimetype,
-        originalName: file.originalname,
+        originalName: uniqueName,
       });
 
       await db
@@ -292,12 +300,35 @@ router.post(
         .set({ file_url })
         .where(eq(documentItems.id, itemId));
 
-      res.status(200).json({ message: "File caricato", file_url });
+      return res.status(200).json({
+        message: "File caricato",
+        item_id: itemId,
+        file_url,
+        file_name: uniqueName,
+      });
     } catch (error) {
       console.error("❌ Errore nell'upload del file:", error);
-      res
-        .status(500)
-        .json({ message: "Errore interno durante l'upload del file" });
+      return res.status(500).json({
+        message: "Errore interno durante l'upload del file",
+        error: error instanceof Error ? error.message : "Errore generico",
+      });
+    }
+  }
+);
+
+router.post(
+  "/documents/:oldId/clone-items/:newId",
+  isAuthenticated,
+  async (req, res) => {
+    const oldId = parseInt(req.params.oldId);
+    const newId = parseInt(req.params.newId);
+
+    try {
+      await storage.cloneDocumentItemsWithFiles(oldId, newId);
+      res.status(200).json({ message: "Elementi clonati con successo" });
+    } catch (err) {
+      console.error("❌ Errore durante il clone degli elementi:", err);
+      res.status(500).json({ message: "Errore durante la clonazione" });
     }
   }
 );
@@ -370,7 +401,6 @@ router.put(
         ? new Date(emissionDate)
         : null;
 
-      // Verifica se ci sono differenze nei metadati
       const metadataChanged =
         (pointNumber && pointNumber !== document.pointNumber) ||
         (title && title !== document.title) ||
@@ -379,22 +409,18 @@ router.put(
           new Date(document.emissionDate).toISOString().split("T")[0] !==
             emissionDateParsed.toISOString().split("T")[0]);
 
-      // Se file nuovo caricato
       if (file) {
         await storage.moveToObsolete(document.filePath);
         const relativePath = path
           .relative(path.resolve(""), file.path)
           .replace(/\\/g, "/");
         updateData.filePath = `/${relativePath}`;
-
         updateData.fileType = file.mimetype;
       } else if (metadataChanged) {
-        // Nessun nuovo file ma metadati modificati
         await storage.moveToObsolete(document.filePath);
-        updateData.filePath = document.filePath; // rimane invariato
+        updateData.filePath = document.filePath;
         updateData.fileType = document.fileType;
       } else {
-        // Niente da aggiornare
         return res.status(200).json({
           message: "Nessuna modifica rilevata",
         });
@@ -402,14 +428,13 @@ router.put(
 
       if (pointNumber?.trim()) updateData.pointNumber = pointNumber;
       if (title?.trim()) updateData.title = title;
+
       const sanitizedRevision = revision?.trim();
       const isRevisionChanged =
         sanitizedRevision && sanitizedRevision !== document.revision;
+
       if (sanitizedRevision) updateData.revision = sanitizedRevision;
-
       if (emissionDateParsed) updateData.emissionDate = emissionDateParsed;
-
-      // Se la revisione è cambiata, marca il vecchio documento come obsoleto e clona i figli
 
       let newDocumentId = id;
 
@@ -419,7 +444,7 @@ router.put(
           ...document,
           ...updateData,
           id: undefined,
-          parentId: null, // 👈 CAMBIA QUESTO A NULL!
+          parentId: null,
           isObsolete: false,
         };
 
@@ -435,12 +460,9 @@ router.put(
 
         newDocumentId = newDoc.id;
 
-        // 👉 Qui logghi il nuovo documento
         console.log("✅ Nuovo documento ID:", newDocumentId);
 
-        const children = await storage.getDocumentItems(id);
-
-        // 👉 Qui logghi quanti figli hai trovato
+        const children = await storage.getDocumentItems(id, true); // 👈 attivi e obsoleti
         console.log("📄 Figli clonati:", children.length);
 
         for (const item of children) {
@@ -451,18 +473,16 @@ router.put(
           });
         }
 
-        return res.status(200).json({
-          message:
-            "Documento aggiornato. Vecchia revisione spostata in obsoleti con figli clonati",
-        });
+        // 👇 Torni il nuovo documento aggiornato!
+        return res.status(200).json(newDoc);
       }
+
       const success = await storage.updateDocument(id, updateData);
       if (!success) throw new Error("Update fallito");
 
-      res.status(200).json({
-        message:
-          "Documento aggiornato e versione precedente spostata in obsoleti",
-      });
+      // 👇 Torni comunque il documento aggiornato (anche se non nuova revisione)
+      const updated = await storage.getDocumentById(id);
+      res.status(200).json(updated);
     } catch (error) {
       console.error("Error updating document:", error);
       res

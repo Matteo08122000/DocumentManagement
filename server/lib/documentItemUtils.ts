@@ -103,20 +103,20 @@ export const saveDocumentItemFile = async ({
   originalName: string;
 }): Promise<string> => {
   try {
-    const itemDir = path.resolve(
-      __dirname,
-      "..",
-      "uploads",
-      "items",
-      String(itemId)
-    );
+    // 📁 Path assoluto verso /uploads/items/:itemId/
+    const uploadsBase = path.resolve(process.cwd(), "uploads");
+    const itemDir = path.join(uploadsBase, "items", String(itemId));
 
+    // 📂 Crea la cartella se non esiste
     fs.mkdirSync(itemDir, { recursive: true });
 
+    // 📄 Costruisci il path finale dove spostare il file
     const destPath = path.join(itemDir, originalName);
 
+    // 🚚 Sposta il file
     fs.renameSync(filePath, destPath);
 
+    // 🌐 Path da salvare nel DB
     return `/uploads/items/${itemId}/${originalName}`;
   } catch (err) {
     console.error("❌ Errore in saveDocumentItemFile:", err);

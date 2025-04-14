@@ -20,7 +20,9 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
       ? new Date(document.emissionDate).toISOString().split("T")[0]
       : "",
     file: null as File | null,
+    filePath: "",
   });
+  const [oldRevision, setOldRevision] = useState(document?.revision);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -40,7 +42,6 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
         headers: {
           "X-CSRF-Token": csrfToken || "",
         },
-
         credentials: "include",
         body,
       });
@@ -49,21 +50,63 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
         throw new Error("Errore durante l'aggiornamento del documento");
       }
 
-      return res.json();
+      return res.json(); // ← ritorna il documento aggiornato
     },
-    onSuccess: () => {
-      // ✅ Tutte le invalidazioni necessarie:
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents/obsolete"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
 
-      toast({
-        title: "Documento aggiornato",
-        description: "Le modifiche sono state salvate correttamente.",
-      });
+    onSuccess: async (updatedDoc) => {
+      try {
+        // ✅ Se la revisione è cambiata, clona gli elementi figli
+        if (oldRevision !== formData.revision) {
+          const cloneRes = await fetch(
+            `/api/documents/${document?.id}/clone-items/${updatedDoc.id}`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken || "",
+              },
+            }
+          );
 
-      onClose();
+          if (!cloneRes.ok) {
+            throw new Error("Clonazione elementi fallita");
+          }
+
+          toast({
+            title: "Elementi clonati",
+            description:
+              "Gli elementi controllati sono stati copiati nella nuova revisione.",
+          });
+        }
+
+        // ✅ Invalida tutte le query necessarie
+        queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+        queryClient.invalidateQueries({
+          queryKey: ["/api/documents/obsolete"],
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+
+        toast({
+          title: "Documento aggiornato",
+          description: "Le modifiche sono state salvate correttamente.",
+        });
+
+        onClose();
+      } catch (err) {
+        console.error("❌ Errore durante la clonazione degli elementi:", err);
+        toast({
+          title: "Attenzione",
+          description:
+            "Il documento è stato aggiornato, ma alcuni elementi non sono stati clonati.",
+          variant: "destructive",
+        });
+
+        // comunque chiudiamo
+        onClose();
+      }
     },
+
     onError: (err: any) => {
       toast({
         title: "Errore",
@@ -73,7 +116,6 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
       });
     },
   });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     mutation.mutate();
@@ -81,6 +123,7 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
 
   useEffect(() => {
     if (document) {
+      setOldRevision(document.revision);
       setFormData({
         pointNumber: document.pointNumber,
         title: document.title,
@@ -89,6 +132,7 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
           .toISOString()
           .split("T")[0],
         file: null,
+        filePath: document.filePath,
       });
     }
   }, [document]);
@@ -161,6 +205,23 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
 
             <div>
               <label className="block text-sm font-medium">File Allegato</label>
+
+              {formData.filePath && !formData.file && (
+                <div className="mt-1 text-sm text-green-600 flex items-center gap-2">
+                  <span className="material-icons-round text-green-600 text-base">
+                    check_circle
+                  </span>
+                  <a
+                    href={formData.filePath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    File già caricato
+                  </a>
+                </div>
+              )}
+
               <input
                 type="file"
                 accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -168,6 +229,7 @@ const DocumentEditModal: React.FC<Props> = ({ isOpen, onClose, document }) => {
                   setFormData({
                     ...formData,
                     file: e.target.files?.[0] || null,
+                    filePath: e.target.files?.[0] ? "" : formData.filePath, // reset se selezioni un file nuovo
                   })
                 }
                 className="mt-1 block w-full"

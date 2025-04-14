@@ -99,39 +99,6 @@ export const storage = {
     });
   },
 
-  saveDocumentItemFile: async ({
-    itemId,
-    filePath,
-    fileType,
-    originalName,
-  }: {
-    itemId: number;
-    filePath: string;
-    fileType: string;
-    originalName: string;
-  }): Promise<string> => {
-    try {
-      const itemDir = path.resolve(
-        __dirname,
-        "..",
-        "uploads",
-        "items",
-        String(itemId)
-      );
-
-      fs.mkdirSync(itemDir, { recursive: true });
-
-      const destPath = path.join(itemDir, originalName);
-
-      fs.renameSync(filePath, destPath);
-
-      return `/uploads/items/${itemId}/${originalName}`;
-    } catch (err) {
-      console.error("❌ Errore in saveDocumentItemFile:", err);
-      throw err;
-    }
-  },
-
   async createUser(data: {
     username: string;
     email: string;
@@ -495,24 +462,110 @@ export const storage = {
   },
 
   // ✅ Funzione 2: Clona i figli da un documento all'altro
-  cloneDocumentItems: async (oldDocId, newDocId) => {
+  // Clona con file fisici aggiornati
+  cloneDocumentItemsWithFiles: async (
+    oldDocumentId,
+    newDocumentId
+  ): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const query = `
-        INSERT INTO document_items (
-          documentId, title, revision, description, emission_date,
-          validity_value, validity_unit, expiration_date,
-          notification_value, notification_unit, status, file_url, isObsolete
-        )
-        SELECT ?, title, revision, description, emission_date,
-               validity_value, validity_unit, expiration_date,
-               notification_value, notification_unit, status, file_url, isObsolete
-        FROM document_items
+      const getQuery = `
+        SELECT * FROM document_items
         WHERE documentId = ?
       `;
-      pool.query(query, [newDocId, oldDocId], (error) => {
-        if (error) return reject(error);
-        resolve();
-      });
+
+      pool.query(
+        getQuery,
+        [oldDocumentId],
+        async (error, items: DocumentItem[]) => {
+          if (error) return reject(error);
+
+          try {
+            await Promise.all(
+              items.map(async (item) => {
+                const { id, file_url, isObsolete } = item;
+
+                const insertQuery = `
+                INSERT INTO document_items
+                (documentId, title, revision, description, emission_date,
+                 validity_value, validity_unit, expiration_date, notification_value,
+                 notification_unit, status, file_url, notification_email, isObsolete)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `;
+
+                const values = [
+                  newDocumentId,
+                  item.title,
+                  item.revision,
+                  item.description || null,
+                  item.emission_date,
+                  item.validity_value,
+                  item.validity_unit,
+                  item.expiration_date,
+                  item.notification_value,
+                  item.notification_unit,
+                  item.status,
+                  null, // placeholder, lo setti dopo
+                  item.notification_email || null,
+                  isObsolete, // ⚠️ IMPORTANTE! mantieni lo stato
+                ];
+
+                const [insertResult]: any = await new Promise(
+                  (resolveInsert, rejectInsert) => {
+                    pool.query(insertQuery, values, (err, result) => {
+                      if (err) return rejectInsert(err);
+                      resolveInsert([result]);
+                    });
+                  }
+                );
+
+                const newItemId = insertResult.insertId;
+
+                if (file_url) {
+                  try {
+                    const oldPath = path.resolve(
+                      process.cwd(),
+                      file_url.replace(/^\/+/, "")
+                    );
+                    const filename = path.basename(oldPath);
+                    const newDir = path.resolve(
+                      process.cwd(),
+                      "uploads",
+                      "items",
+                      String(newItemId)
+                    );
+                    const newPath = path.join(newDir, filename);
+
+                    fs.mkdirSync(newDir, { recursive: true });
+                    fs.copyFileSync(oldPath, newPath);
+
+                    const newFileUrl = `/uploads/items/${newItemId}/${filename}`;
+
+                    await new Promise((resolveUpdate, rejectUpdate) => {
+                      const updateQuery = `
+                      UPDATE document_items SET file_url = ? WHERE id = ?
+                    `;
+                      pool.query(
+                        updateQuery,
+                        [newFileUrl, newItemId],
+                        (err) => {
+                          if (err) return rejectUpdate(err);
+                          resolveUpdate(true);
+                        }
+                      );
+                    });
+                  } catch (copyErr) {
+                    console.error(`❌ Errore copia file item ${id}:`, copyErr);
+                  }
+                }
+              })
+            );
+
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
     });
   },
 

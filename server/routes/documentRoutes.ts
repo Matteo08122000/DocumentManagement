@@ -7,6 +7,7 @@ import { uploadSingleDoc } from "../middlewares/uploadSingleDoc";
 import { checkExpiringDocumentsAndNotify } from "../jobs/checkExpiringDocumentsAndNotify";
 import { aggregateDocumentStatus } from "@shared/documentUtils";
 import { fromZodError } from "zod-validation-error";
+import { pool } from "../storage";
 import {
   insertDocumentSchema,
   insertDocumentItemSchema,
@@ -378,6 +379,34 @@ router.put("/documents/:id/obsolete", isAuthenticated, async (req, res) => {
       .status(500)
       .json({ message: "Errore nel marcare il documento come obsoleto" });
   }
+});
+
+router.get("/documents/:id/items/active", (req, res) => {
+  const documentId = req.params.id;
+
+  const query = `
+    SELECT * FROM document_items
+    WHERE documentId = ? AND isObsolete = false
+  `;
+
+  pool.query(query, [documentId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Errore DB" });
+    res.json(results);
+  });
+});
+
+router.get("/documents/:id/items/obsolete", (req, res) => {
+  const documentId = req.params.id;
+
+  const query = `
+    SELECT * FROM document_items
+    WHERE documentId = ? AND isObsolete = true
+  `;
+
+  pool.query(query, [documentId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Errore DB" });
+    res.json(results);
+  });
 });
 
 router.put(

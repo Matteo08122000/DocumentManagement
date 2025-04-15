@@ -183,7 +183,13 @@ export const storage = {
 
         const items = (results as DocumentItem[]).map((item) => ({
           ...item,
-          status: calcolaStatus(item.expiration_date, item.notification_value),
+          status: includeObsolete
+            ? "revoked"
+            : calcolaStatus(
+                item.expiration_date,
+                item.notification_value,
+                item.notification_unit
+              ),
         }));
 
         resolve(items);
@@ -268,84 +274,125 @@ export const storage = {
       });
     });
   },
+
   async createDocumentItem(item: InsertDocumentItem): Promise<DocumentItem> {
     return new Promise((resolve, reject) => {
-      const checkQuery = `
-        SELECT revision FROM document_items
-        WHERE documentId = ? AND title = ? AND isObsolete = false
-        ORDER BY revision DESC
+      const checkExistingQuery = `
+        SELECT id, isObsolete, revision FROM document_items
+        WHERE documentId = ? AND title = ? AND revision = ?
         LIMIT 1
       `;
 
       pool.query(
-        checkQuery,
-        [item.documentId, item.title],
-        (revErr, results) => {
-          if (revErr) return reject(revErr);
+        checkExistingQuery,
+        [item.documentId, item.title, item.revision],
+        (dupErr, dupResults) => {
+          if (dupErr) return reject(dupErr);
 
-          const latest = results[0];
-          if (latest) {
-            if (item.revision < latest.revision) {
-              return reject(
-                new Error("Revisione inferiore a quella esistente")
-              );
-            }
-            if (item.revision === latest.revision) {
-              return reject(
-                new Error("Revisione già esistente per questo titolo")
-              );
-            }
+          if (dupResults.length > 0) {
+            return reject(
+              new Error(
+                `Esiste già una revisione ${item.revision} per questo titolo`
+              )
+            );
           }
 
-          // ✅ Se siamo qui, possiamo inserire
-          const insertQuery = `
-            INSERT INTO document_items 
-            (documentId, title, revision, description, emission_date, validity_value, validity_unit,
-              expiration_date, notification_value, notification_unit, status, file_url, notification_email, isObsolete)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          const getLatestActiveQuery = `
+            SELECT revision FROM document_items
+            WHERE documentId = ? AND title = ? AND isObsolete = false
+            ORDER BY revision DESC
+            LIMIT 1
           `;
 
-          const values = [
-            item.documentId,
-            item.title,
-            item.revision,
-            item.description || null,
-            item.emission_date,
-            item.validity_value,
-            item.validity_unit,
-            item.expiration_date,
-            item.notification_value,
-            item.notification_unit,
-            item.status,
-            item.file_url || null,
-            item.notification_email || null,
-            false,
-          ];
+          pool.query(
+            getLatestActiveQuery,
+            [item.documentId, item.title],
+            (revErr, revResults) => {
+              if (revErr) return reject(revErr);
 
-          pool.query(insertQuery, values, async (insertErr, insertResults) => {
-            if (insertErr) return reject(insertErr);
+              const latest = revResults[0];
+              if (latest && item.revision < latest.revision) {
+                return reject(
+                  new Error(
+                    `Impossibile inserire: la revisione ${item.revision} è inferiore alla più recente (${latest.revision})`
+                  )
+                );
+              }
 
-            const newItem: DocumentItem = {
-              id: (insertResults as any).insertId,
-              ...item,
-              isObsolete: false,
-            };
-
-            try {
-              await handleDocumentItemRevisionUpdate(
-                pool,
-                newItem.id,
-                newItem.revision
+              // ✅ Calcolo lo stato in base alla data di scadenza e preavviso
+              const calculatedStatus = calcolaStatus(
+                item.expiration_date,
+                item.notification_value,
+                item.notification_unit
               );
-              resolve(newItem);
-            } catch (err) {
-              console.error(
-                "❌ Errore durante handleDocumentItemRevisionUpdate:",
-                err
+
+              const insertQuery = `
+                INSERT INTO document_items 
+                (documentId, title, revision, description, emission_date, validity_value, validity_unit,
+                  expiration_date, notification_value, notification_unit, status, file_url, notification_email, isObsolete)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `;
+
+              const values = [
+                item.documentId,
+                item.title,
+                item.revision,
+                item.description || null,
+                item.emission_date,
+                item.validity_value,
+                item.validity_unit,
+                item.expiration_date,
+                item.notification_value,
+                item.notification_unit,
+                calculatedStatus,
+                item.file_url || null,
+                item.notification_email || null,
+                item.isObsolete || false,
+              ];
+
+              pool.query(
+                insertQuery,
+                values,
+                async (insertErr, insertResults) => {
+                  if (insertErr) return reject(insertErr);
+
+                  const newItem: DocumentItem = {
+                    id: (insertResults as any).insertId,
+                    ...item,
+                    status: calculatedStatus,
+                    isObsolete: false,
+                  };
+
+                  try {
+                    const obsoleteQuery = `
+                      UPDATE document_items
+                      SET isObsolete = true
+                      WHERE documentId = ? AND title = ? AND revision < ?
+                    `;
+
+                    await new Promise((resolveUpdate, rejectUpdate) => {
+                      pool.query(
+                        obsoleteQuery,
+                        [item.documentId, item.title, item.revision],
+                        (obsErr) => {
+                          if (obsErr) return rejectUpdate(obsErr);
+                          resolveUpdate(null);
+                        }
+                      );
+                    });
+
+                    resolve(newItem);
+                  } catch (err) {
+                    console.error(
+                      "❌ Errore durante aggiornamento obsoleti:",
+                      err
+                    );
+                    reject(err);
+                  }
+                }
               );
-              reject(err);
             }
-          });
+          );
         }
       );
     });
@@ -357,7 +404,7 @@ export const storage = {
   ): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       try {
-        // Revisione? Gestione obsolescenza
+        // 🔁 Se cambia la revisione, gestiamo obsolescenza
         if (data.revision !== undefined) {
           const { handleDocumentItemRevisionUpdate } = await import(
             "./lib/documentItemUtils"
@@ -365,7 +412,7 @@ export const storage = {
           await handleDocumentItemRevisionUpdate(pool, id, data.revision);
         }
 
-        // Ricalcolo scadenza
+        // ⏳ Calcolo nuova data di scadenza se cambia emissione o validità
         if (
           data.emission_date &&
           data.validity_value !== undefined &&
@@ -380,7 +427,20 @@ export const storage = {
           data.expiration_date = base;
         }
 
-        // ❗️Fix: evita update senza campi
+        // ✅ Calcolo nuovo status se ci sono i campi necessari
+        if (
+          data.expiration_date &&
+          data.notification_value !== undefined &&
+          data.notification_unit
+        ) {
+          data.status = calcolaStatus(
+            data.expiration_date,
+            data.notification_value,
+            data.notification_unit
+          );
+        }
+
+        // ❗️Fix: nessun campo? niente update
         if (Object.keys(data).length === 0) {
           return reject(new Error("Nessun campo da aggiornare"));
         }
@@ -391,7 +451,6 @@ export const storage = {
         const values = Object.values(data);
         const query = `UPDATE document_items SET ${fields} WHERE id = ?`;
 
-        // 👇 LOG VISIBILE SE VIENE CHIAMATO QUALSIASI UPDATE
         if (fields.includes("isObsolete")) {
           console.warn("⚠️ QUALCUNO STA MARCANDO OBSOLETO:", {
             query,

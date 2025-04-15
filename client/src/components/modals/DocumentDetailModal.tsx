@@ -152,9 +152,11 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         title: "Elemento aggiornato",
         description: "Modifica completata con successo",
       });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/documents", document?.id, "items"],
-      });
+      if (document?.id) {
+        queryClient.invalidateQueries(["documentItems", document.id, false]); // attivi
+        queryClient.invalidateQueries(["documentItems", document.id, true]); // obsoleti
+      }
+      // obsoleti
       setSelectedItem(null);
       setActiveTab("items");
     },
@@ -194,7 +196,8 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
   // Display items with status
   const renderItems = () => {
-    if (isLoadingItems) return <div>Caricamento elementi...</div>;
+    if (isLoadingValid || isLoadingObsolete)
+      return <div>Caricamento elementi...</div>;
 
     return (
       <div className="space-y-4">
@@ -297,9 +300,11 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
         description: "Elemento del documento aggiunto con successo",
       });
       // Invalida query sugli elementi del documento corrente
-      queryClient.invalidateQueries({
-        queryKey: ["/api/documents", document?.id, "items"],
-      });
+      if (document?.id) {
+        queryClient.invalidateQueries(["documentItems", document.id, false]); // attivi
+        queryClient.invalidateQueries(["documentItems", document.id, true]); // obsoleti
+      }
+      // obsoleti
 
       // Invalida altre query per aggiornare lo stato di tutti i documenti
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
@@ -903,7 +908,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                               : "-"}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
-                            <StatusEmoji status={item.status} />
+                            <StatusEmoji status="revoked" />
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500">
                             {item.file_url ? (

@@ -31,6 +31,7 @@ export const documentStatus = {
   VALID: "valid",
   EXPIRING: "expiring",
   EXPIRED: "expired",
+  REVOKED: "revoked",
 } as const;
 
 export const documentTypes = {

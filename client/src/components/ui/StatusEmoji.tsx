@@ -1,26 +1,26 @@
-import React from 'react';
+import React from "react";
 
 interface StatusEmojiProps {
   status: string;
 }
 
 const StatusEmoji: React.FC<StatusEmojiProps> = ({ status }) => {
-  let emoji = '';
-  
+  let emoji = "";
+
   switch (status) {
-    case 'valid':
-      emoji = '✅';
+    case "valid":
+      emoji = "✅";
       break;
-    case 'expiring':
-      emoji = '⚠️';
+    case "expiring":
+      emoji = "⚠️";
       break;
-    case 'expired':
-      emoji = '❌';
+    case "expired":
+      emoji = "❌";
       break;
     default:
-      emoji = '❓';
+      emoji = "📄🕰️";
   }
-  
+
   return <span className="text-lg">{emoji}</span>;
 };
 

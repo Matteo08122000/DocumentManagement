@@ -71,8 +71,31 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     isOpen
   );
 
+  const filteredValidItems = validItems.filter(
+    (item, index, self) =>
+      !item.isObsolete && // questo è un ulteriore filtro di sicurezza
+      index ===
+        self.findIndex(
+          (i) =>
+            i.title === item.title &&
+            i.revision === item.revision &&
+            i.emission_date === item.emission_date
+        )
+  );
+
   const { data: obsoleteItems = [], isLoading: isLoadingObsolete } =
     useDocumentItems(document?.id, true, isOpen);
+
+  const filteredObsoleteItems = obsoleteItems.filter(
+    (item, index, self) =>
+      index ===
+      self.findIndex(
+        (i) =>
+          i.title === item.title &&
+          i.revision === item.revision &&
+          i.emission_date === item.emission_date
+      )
+  );
 
   // Form setup for adding new items
   const form = useForm<any>({
@@ -499,7 +522,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                     <div key={i} className="h-12 bg-gray-200 rounded"></div>
                   ))}
                 </div>
-              ) : validItems.length === 0 ? (
+              ) : filteredValidItems.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <p>Nessun elemento controllato per questo documento.</p>
                   <Button
@@ -545,7 +568,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {validItems.map((item) => (
+                      {filteredValidItems.map((item) => (
                         <tr key={item.id}>
                           <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                             {item.title}
@@ -867,7 +890,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
             <TabsContent value="obsoleti">
               {isLoadingObsolete ? (
                 <div>Caricamento elementi obsoleti...</div>
-              ) : obsoleteItems.length === 0 ? (
+              ) : filteredObsoleteItems.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   Nessun elemento obsoleto per questo documento.
                 </div>
@@ -894,7 +917,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {obsoleteItems.map((item) => (
+                      {filteredObsoleteItems.map((item) => (
                         <tr key={item.id}>
                           <td className="px-4 py-4 text-sm text-gray-900">
                             {item.title}

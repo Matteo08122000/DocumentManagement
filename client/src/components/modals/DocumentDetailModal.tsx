@@ -476,7 +476,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="w-full max-w-full sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex justify-between items-center border-b pb-3">
               <DialogTitle className="text-lg leading-6 font-medium text-gray-900">
@@ -537,7 +537,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
+                <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
                   <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
@@ -895,7 +895,7 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
                   Nessun elemento obsoleto per questo documento.
                 </div>
               ) : (
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
+                <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg mb-6">
                   <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                       <tr>

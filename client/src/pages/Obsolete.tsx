@@ -10,6 +10,7 @@ import { Link } from "wouter";
 
 const Obsolete: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  
 
   // Se l'utente non è autenticato, mostra un messaggio di accesso richiesto
   if (!isAuthenticated) {

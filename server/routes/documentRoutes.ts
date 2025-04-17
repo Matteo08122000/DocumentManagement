@@ -446,7 +446,7 @@ router.put(
         updateData.filePath = `/${relativePath}`;
         updateData.fileType = file.mimetype;
       } else if (metadataChanged) {
-        await storage.moveToObsolete(document.filePath);
+        // Il file rimane invariato, NON serve spostarlo tra gli obsoleti
         updateData.filePath = document.filePath;
         updateData.fileType = document.fileType;
       } else {
@@ -550,6 +550,11 @@ router.put("/documents/items/:id", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Elemento non trovato" });
     }
 
+    // ✅ Protezione contro sovrascrittura accidentale del file_url
+    if (itemUpdate.file_url === "") {
+      delete itemUpdate.file_url;
+    }
+
     const updated = await storage.updateDocumentItem(id, itemUpdate);
     res.json(updated);
   } catch (error) {
@@ -559,6 +564,7 @@ router.put("/documents/items/:id", isAuthenticated, async (req, res) => {
     });
   }
 });
+
 // DELETE /documents/items/:id
 router.delete("/documents/items/:id", isAuthenticated, async (req, res) => {
   try {

@@ -440,11 +440,23 @@ export const storage = {
           );
         }
 
-        // ❗️Fix: nessun campo? niente update
+        // —— RIMOZIONE CAMPi undefined/null ——
+        Object.entries(data).forEach(([key, value]) => {
+          if (value === undefined || value === null) {
+            delete (data as any)[key];
+          }
+        });
+        // Evitiamo anche di sovrascrivere file_url con stringa vuota
+        if ((data as any).file_url === "") {
+          delete (data as any).file_url;
+        }
+
+        // ❗️Se non resta nulla da aggiornare, esci
         if (Object.keys(data).length === 0) {
           return reject(new Error("Nessun campo da aggiornare"));
         }
 
+        // Costruisci dinamicamente SET e valori
         const fields = Object.keys(data)
           .map((key) => `${key} = ?`)
           .join(", ");
@@ -458,6 +470,7 @@ export const storage = {
           });
         }
 
+        // Esegui update
         pool.query(query, [...values, id], (error) => {
           if (error) return reject(error);
           resolve(true);

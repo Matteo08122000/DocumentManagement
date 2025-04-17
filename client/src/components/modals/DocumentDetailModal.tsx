@@ -132,12 +132,28 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   });
 
   const handleEditSubmit = form.handleSubmit(async (data) => {
-    console.log("🧾 DATI FORM SUBMIT:", data);
-    console.log("📦 REVISIONE INVIATA:", data.revision, typeof data.revision);
-
     if (!selectedItem?.id) return;
 
-    await editItemMutation.mutateAsync(data);
+    try {
+      const updatedItem = await editItemMutation.mutateAsync(data);
+
+      // ✅ Se c'è un file nuovo caricato, caricalo
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        await fetch(`/api/documents/items/${selectedItem.id}/files`, {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": csrfToken || "",
+          },
+          body: formData,
+          credentials: "include",
+        });
+      }
+    } catch (error) {
+      console.error("Errore aggiornamento/modifica:", error);
+    }
   });
 
   const editItemMutation = useMutation({
@@ -445,24 +461,18 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     try {
       const res = await fetch(`/api/documents/items/${id}`, {
         method: "DELETE",
-        headers: {
-          "X-CSRF-Token": csrfToken || "",
-        },
+        headers: { "X-CSRF-Token": csrfToken || "" },
         credentials: "include",
       });
-
-      if (!res.ok) {
-        throw new Error("Errore nella cancellazione");
-      }
+      if (!res.ok) throw new Error("Errore nella cancellazione");
 
       toast({
         title: "Elemento eliminato",
         description: "Elemento rimosso con successo",
       });
 
-      queryClient.invalidateQueries({
-        queryKey: ["/api/documents", document?.id, "items"],
-      });
+      queryClient.invalidateQueries(["documentItems", document.id, false]);
+      queryClient.invalidateQueries(["documentItems", document.id, true]);
     } catch (error) {
       toast({
         title: "Errore",
